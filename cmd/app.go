@@ -38,8 +38,9 @@ func main() {
 
 	v1 := r.Group("/api/v1")
 	{
+		v1.POST("/createAccount", handlers.CreateAccount(s))
+		v1.POST("/login", handlers.Login(s))
 		v1.GET("/user/:userID", handlers.GetUser(s))
-		v1.POST("/user", handlers.CreateAccount(s))
 	}
 
 	r.GET("/ping", func(c *gin.Context) {
