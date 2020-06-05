@@ -2,10 +2,13 @@ package main
 
 import (
 	"log"
+	"time"
 
+	"github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -18,12 +21,23 @@ func main() {
 
 	// TODO: setup db
 
-	r := gin.Default()
+	// Logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	// Router
+	r := gin.New()
+
+	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+	r.Use(ginzap.RecoveryWithZap(logger, true))
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
+	})
+	r.GET("/panic", func(c *gin.Context) {
+		panic("An unexpected error happen!")
 	})
 
 	r.Run()
