@@ -10,4 +10,4 @@ WIP Google+ clone
 
     # Build with Docker
     docker build -t galt .
-    docker run -p 8000:8000 galt
+    docker run --rm -p 8080:8080 galt:latest
