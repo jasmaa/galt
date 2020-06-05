@@ -13,7 +13,7 @@ type Store struct {
 }
 
 // Open opens database connection
-func (store *Store) Open() {
+func (s *Store) Open() {
 
 	// Connect to db
 	pgUser := os.Getenv("POSTGRES_USER")
@@ -32,5 +32,32 @@ func (store *Store) Open() {
 		log.Fatal(err)
 	}
 
-	store.db = db
+	s.db = db
+}
+
+func (s *Store) InsertUser(user User) bool {
+
+	_, err := s.db.Exec(
+		"INSERT INTO users (id, username, password) VALUES ($1, $2, $3)",
+		user.ID, user.Username, user.Password,
+	)
+
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// GetUser gets user with id from db
+func (s *Store) GetUser(id string) *User {
+
+	row := s.db.QueryRow("SELECT id, username, password FROM users WHERE id=$1", id)
+
+	user := User{}
+	if err := row.Scan(&user.ID, &user.Username, &user.Password); err != nil {
+		return nil
+	}
+
+	return &user
 }

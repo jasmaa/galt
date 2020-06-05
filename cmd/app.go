@@ -9,6 +9,9 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+
+	"github.com/jasmaa/galt/internal/handlers"
+	"github.com/jasmaa/galt/internal/store"
 )
 
 func init() {
@@ -20,6 +23,8 @@ func init() {
 func main() {
 
 	// TODO: setup db
+	s := store.Store{}
+	s.Open()
 
 	// Logger
 	logger, _ := zap.NewProduction()
@@ -30,6 +35,12 @@ func main() {
 
 	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 	r.Use(ginzap.RecoveryWithZap(logger, true))
+
+	v1 := r.Group("/api/v1")
+	{
+		v1.GET("/user/:userID", handlers.GetUser(s))
+		v1.POST("/user", handlers.CreateAccount(s))
+	}
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
