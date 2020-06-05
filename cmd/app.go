@@ -1,49 +1,30 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"log"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"go.uber.org/zap"
 )
 
-var port = 8000
+func init() {
+	if err := godotenv.Load(".env.local"); err != nil {
+		log.Print("No .env file found")
+	}
+}
 
 func main() {
 
-	/*
-		// Connect to db
-		pgUser := os.Getenv("POSTGRES_USER")
-		pgPassword := os.Getenv("POSTGRES_PASSWORD")
-		pgHost := os.Getenv("POSTGRES_HOST")
-		pgPort := os.Getenv("POSTGRES_PORT")
-		pgDB := os.Getenv("POSTGRES_DB")
+	// TODO: setup db
 
-		connStr := fmt.Sprintf(
-			"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-			pgUser, pgPassword, pgHost, pgPort, pgDB,
-		)
-		db, err := sql.Open("postgres", connStr)
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
+	r := gin.Default()
 
-	// Temp logging setup
-	l, err := zap.NewDevelopment()
-	if err != nil {
-		panic("Could not create logger")
-	}
-	zap.ReplaceGlobals(l)
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
 
-	// Routes
-	router := mux.NewRouter()
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "hi there")
-	}).Methods("GET")
-
-	zap.S().Infof("Server started on port: %d", port)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), router)
+	r.Run()
 }
