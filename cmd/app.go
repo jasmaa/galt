@@ -2,10 +2,9 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -25,6 +24,8 @@ func init() {
 
 func main() {
 
+	hmacSecret := os.Getenv("HMAC_SECRET")
+
 	// Setup db
 	s := store.Store{}
 	s.Open()
@@ -38,14 +39,11 @@ func main() {
 	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 	r.Use(ginzap.RecoveryWithZap(logger, true))
 
-	cookieStore := cookie.NewStore([]byte("secret"))
-	r.Use(sessions.Sessions("mysession", cookieStore))
-
 	// Handlers
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/createAccount", handlers.CreateAccount(s))
-		v1.POST("/login", handlers.Login(s))
+		v1.POST("/login", handlers.Login(s, hmacSecret))
 		v1.GET("/user/:userID", handlers.GetUser(s))
 	}
 
@@ -57,10 +55,9 @@ func main() {
 	r.GET("/panic", func(c *gin.Context) {
 		panic("An unexpected error happen!")
 	})
-	r.GET("/testauth", middleware.AuthUser(), func(c *gin.Context) {
-		session := sessions.Default(c)
+	r.GET("/testauth", middleware.AuthUser(hmacSecret), func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": session.Get("username"),
+			"message": "hi there",
 		})
 	})
 

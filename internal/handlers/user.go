@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gin-contrib/sessions"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -47,7 +48,7 @@ func CreateAccount(s store.Store) gin.HandlerFunc {
 }
 
 // Login logs in user
-func Login(s store.Store) gin.HandlerFunc {
+func Login(s store.Store, hmacSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		username := c.PostForm("username")
@@ -70,13 +71,17 @@ func Login(s store.Store) gin.HandlerFunc {
 			return
 		}
 
-		// Create session
-		session := sessions.Default(c)
-		session.Set("username", user.Username)
-		session.Save()
+		// Create JWT token with claims
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"username": user.Username,
+			"iat":      time.Now().Unix(),
+			"exp":      time.Now().Add(time.Hour * time.Duration(24)).Unix(),
+		})
+		tokenString, err := token.SignedString([]byte(hmacSecret))
 
-		// TODO: supply token
-		c.JSON(http.StatusOK, gin.H{})
+		c.JSON(http.StatusOK, gin.H{
+			"token": tokenString,
+		})
 	}
 }
 
