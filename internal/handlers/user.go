@@ -1,10 +1,13 @@
 package handlers
 
 import (
-	"golang.org/x/crypto/bcrypt"
+	"net/http"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/jasmaa/galt/internal/store"
 )
 
@@ -21,29 +24,25 @@ func CreateAccount(s store.Store) gin.HandlerFunc {
 		// Hash password
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 		if err != nil {
-			c.JSON(200, gin.H{
-				"success": false,
-				"error":   err.Error(),
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
 			})
 			return
 		}
 
-		res, err := s.InsertUser(store.User{
+		err = s.InsertUser(store.User{
 			ID:       userID,
 			Username: username,
 			Password: string(hash),
 		})
 		if err != nil {
-			c.JSON(500, gin.H{
-				"success": res,
-				"error":   err.Error(),
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
 			})
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"success": res,
-		})
+		c.JSON(http.StatusOK, gin.H{})
 	}
 }
 
@@ -56,9 +55,8 @@ func Login(s store.Store) gin.HandlerFunc {
 
 		user, err := s.GetUserByUsername(username)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"success": false,
-				"error":   "Invalid credentials",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid credentials",
 			})
 			return
 		}
@@ -66,17 +64,19 @@ func Login(s store.Store) gin.HandlerFunc {
 		// Compare password hashes
 		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 		if err != nil {
-			c.JSON(500, gin.H{
-				"success": false,
-				"error":   "Invalid credentials",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid credentials",
 			})
 			return
 		}
 
+		// Create session
+		session := sessions.Default(c)
+		session.Set("username", user.Username)
+		session.Save()
+
 		// TODO: supply token
-		c.JSON(200, gin.H{
-			"success": true,
-		})
+		c.JSON(http.StatusOK, gin.H{})
 	}
 }
 
@@ -87,16 +87,14 @@ func GetUser(s store.Store) gin.HandlerFunc {
 		userID := c.Param("userID")
 		user, err := s.GetUserByID(userID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"success": false,
-				"error":   err.Error(),
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
 			})
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"success": true,
-			"user":    user,
+		c.JSON(http.StatusOK, gin.H{
+			"user": user,
 		})
 	}
 }

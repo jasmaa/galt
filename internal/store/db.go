@@ -37,16 +37,16 @@ func (s *Store) Open() {
 }
 
 // InsertUser inserts user into db
-func (s *Store) InsertUser(user User) (bool, error) {
+func (s *Store) InsertUser(user User) error {
 
 	// Check for duplicate username
 	row := s.db.QueryRow("SELECT COUNT(username) FROM users WHERE username=$1", user.Username)
 	var count int
 	if err := row.Scan(&count); err != nil {
-		return false, errors.New("Error with database")
+		return errors.New("Error with database")
 	}
 	if count > 0 {
-		return false, errors.New("User already exists")
+		return errors.New("User already exists")
 	}
 
 	// Insert user
@@ -55,10 +55,10 @@ func (s *Store) InsertUser(user User) (bool, error) {
 		user.ID, user.Username, user.Password,
 	)
 	if err != nil {
-		return false, errors.New("Error creating user")
+		return errors.New("Error creating user")
 	}
 
-	return true, nil
+	return nil
 }
 
 // GetUserByID gets user by id from db
