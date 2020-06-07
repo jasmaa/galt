@@ -59,3 +59,17 @@ func (s *Store) GetUserByUsername(username string) (*User, error) {
 
 	return &user, nil
 }
+
+// DeleteUserByUsername deletes user by username
+func (s *Store) DeleteUserByUsername(username string) error {
+
+	_, err := s.db.Exec(
+		"DELETE FROM users WHERE username=$1",
+		username,
+	)
+	if err != nil {
+		return errors.New("Error deleting user")
+	}
+
+	return nil
+}

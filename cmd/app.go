@@ -52,6 +52,7 @@ func main() {
 
 	v1.GET("/user/:userID", handlers.GetUser())
 	v1.GET("/user", middleware.AuthUser(hmacSecret), handlers.GetProfile())
+	v1.DELETE("/user", middleware.AuthUser(hmacSecret), handlers.DeleteProfile())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

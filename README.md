@@ -2,12 +2,12 @@
 
 WIP Google+ clone
 
-# Build and Run
+## Build and Run
 
-    # Build locally
+### Build locally
     make
     ./app
 
-    # Build with Docker
+### Build with Docker
     docker build -t galt .
     docker run --rm -p 8080:8080 galt:latest

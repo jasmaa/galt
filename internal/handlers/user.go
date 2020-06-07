@@ -8,8 +8,8 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-// UserAPI represents a user in API response
-type UserAPI struct {
+// APIUser represents a user in API response
+type APIUser struct {
 	ID       string `form:"id" json:"id" binding:"required"`
 	Username string `form:"username" json:"username" binding:"required"`
 }
@@ -30,7 +30,7 @@ func GetUser() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"user": UserAPI{
+			"user": APIUser{
 				ID:       user.ID,
 				Username: user.Username,
 			},
@@ -54,10 +54,29 @@ func GetProfile() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"user": UserAPI{
+			"user": APIUser{
 				ID:       user.ID,
 				Username: user.Username,
 			},
 		})
+	}
+}
+
+// DeleteProfile deletes user account
+func DeleteProfile() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		username := c.MustGet("username").(string)
+
+		err := s.DeleteUserByUsername(username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{})
 	}
 }
