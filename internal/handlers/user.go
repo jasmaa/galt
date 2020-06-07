@@ -68,6 +68,55 @@ func GetProfile() gin.HandlerFunc {
 	}
 }
 
+// UpdateProfile updates user profile
+func UpdateProfile() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		userID := c.MustGet("userID").(string)
+
+		username := c.PostForm("username")
+		description := c.PostForm("description")
+		profileImgURL := c.PostForm("profileImgURL")
+
+		user, err := s.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Update user
+		if len(username) > 0 {
+			user.Username = username
+		}
+		if len(description) > 0 {
+			user.Description = description
+		}
+		if len(profileImgURL) > 0 {
+			user.ProfileImgURL = profileImgURL
+		}
+
+		err = s.UpdateUser(*user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"user": APIUser{
+				ID:            user.ID,
+				Username:      user.Username,
+				Description:   user.Description,
+				ProfileImgURL: user.ProfileImgURL,
+			},
+		})
+	}
+}
+
 // DeleteProfile deletes user account
 func DeleteProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {

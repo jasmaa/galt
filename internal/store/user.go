@@ -62,7 +62,21 @@ func (s *Store) GetUserByUsername(username string) (*User, error) {
 	return &user, nil
 }
 
-// DeleteUserByID deletes user by username
+// UpdateUser udpates user
+func (s *Store) UpdateUser(user User) error {
+
+	_, err := s.db.Exec(
+		"UPDATE users SET username=$2, password=$3, description=$4, profile_img_url=$5 WHERE id=$1",
+		user.ID, user.Username, user.PasswordHash, user.Description, user.ProfileImgURL,
+	)
+	if err != nil {
+		return errors.New("Error updating user")
+	}
+
+	return nil
+}
+
+// DeleteUserByID deletes user by userID
 func (s *Store) DeleteUserByID(userID string) error {
 
 	_, err := s.db.Exec("DELETE FROM users WHERE id=$1", userID)
