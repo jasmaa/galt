@@ -1,4 +1,5 @@
 # Galt
+[![CircleCI](https://circleci.com/gh/jasmaa/galt.svg?style=svg)](https://circleci.com/gh/jasmaa/galt)
 
 WIP Google+ clone
 
