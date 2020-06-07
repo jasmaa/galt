@@ -41,11 +41,17 @@ func main() {
 
 	// Handlers
 	v1 := r.Group("/api/v1")
-	{
-		v1.POST("/createAccount", handlers.CreateAccount(s))
-		v1.POST("/login", handlers.Login(s, hmacSecret))
-		v1.GET("/user/:userID", handlers.GetUser(s))
-	}
+
+	v1.Use(func(c *gin.Context) {
+		c.Set("store", s)
+		c.Next()
+	})
+
+	v1.POST("/createAccount", handlers.CreateAccount())
+	v1.POST("/login", handlers.Login(hmacSecret))
+
+	v1.GET("/user/:userID", handlers.GetUser())
+	v1.GET("/user", middleware.AuthUser(hmacSecret), handlers.GetProfile())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -54,11 +60,6 @@ func main() {
 	})
 	r.GET("/panic", func(c *gin.Context) {
 		panic("An unexpected error happen!")
-	})
-	r.GET("/testauth", middleware.AuthUser(hmacSecret), func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "hi there",
-		})
 	})
 
 	r.Run()

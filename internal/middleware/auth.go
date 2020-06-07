@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 
@@ -16,7 +15,7 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 
 		// Extract token
 		authHeader := c.GetHeader("Authorization")
-		r := regexp.MustCompile(`Bearer (.+)`)
+		r := regexp.MustCompile(`Bearer ([\w-]+\.[\w-]+\.[\w-]+)`)
 		res := r.FindStringSubmatch(authHeader)
 		if len(res) != 2 {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -46,9 +45,8 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: reply with other errors
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			fmt.Println(claims["username"])
+			c.Set("username", claims["username"])
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{
