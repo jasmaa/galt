@@ -23,6 +23,13 @@ func CreateAccount() gin.HandlerFunc {
 
 		// TODO: input validation
 
+		if len(username) <= 0 || len(password) <= 0 {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "No username or password entered",
+			})
+			return
+		}
+
 		// Hash password
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 		if err != nil {

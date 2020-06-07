@@ -34,3 +34,8 @@ func (s *Store) Open() {
 
 	s.db = db
 }
+
+// Close closes database connection
+func (s *Store) Close() {
+	s.db.Close()
+}

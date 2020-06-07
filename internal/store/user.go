@@ -18,7 +18,7 @@ func (s *Store) InsertUser(user User) error {
 	row := s.db.QueryRow("SELECT COUNT(username) FROM users WHERE username=$1", user.Username)
 	var count int
 	if err := row.Scan(&count); err != nil {
-		return errors.New("Error with database")
+		return err
 	}
 	if count > 0 {
 		return errors.New("User already exists")

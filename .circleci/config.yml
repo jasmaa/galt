@@ -7,11 +7,20 @@ jobs:
     docker:
       # specify the version
       - image: circleci/golang:1.14
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: galt
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
+      - image: circleci/postgres:9.6-alpine-ram
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: galt
 
     #### TEMPLATE_NOTE: go expects specific checkout path representing url
     #### expecting it in the form of
@@ -21,7 +30,23 @@ jobs:
     steps:
       - checkout
 
+      - run:
+          name: Create database url
+          command: echo "export TEST_DATABASE_URL=postgresql://${POSTGRES_USER}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}" >> $BASH_ENV
+
+      - run: sudo apt-get update
+      - run: sudo apt-get install postgresql-client
+
+      - run:
+          name: Initialize database
+          command: psql -d $TEST_DATABASE_URL -f db/init.sql
+
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v ./...
+
+      - run:
+          name: Check user table
+          command: psql -d $TEST_DATABASE_URL -c "SELECT * FROM users"
+
       - run: go build cmd/app.go
