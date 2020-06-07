@@ -9,17 +9,27 @@
     - / : DELETE (auth)
     - /:userID/statuses : GET
     - /:userID/circles : GET
-    - /:userID/circles/:circleID : POST (auth)
-    - /:userID/circles/:circleID : PUT (auth)
-    - /:userID/circles/:circleID/addUser : POST (auth)
-    - /:userID/circles/:circleID/removeUser : POST (auth)
-    - /:userID/circles/:circleID : DELETE (auth)
 
   - /status
-    - / : POST (auth)
     - /:statusID : GET
+    - / : POST (auth)
     - /:statusID : PUT (auth)
-    - /:statusID : DELETE (auth)  
+    - /:statusID : DELETE (auth)
+    - /:statusID/comments : GET
+    - /:statusID/comment : POST (auth)
+    
+  - /circle
+    - /:circleID : POST (auth)
+    - /:circleID : PUT (auth)
+    - /:circleID/addUser : POST (auth)
+    - /:circleID/removeUser : POST (auth)
+    - /:circleID : DELETE (auth)
+
+  - /comment
+    - /:commentID : GET
+    - /:commentID : PUT (auth)
+    - /:commentID : DELETE (auth)
+    - /:commentID/comment : POST (auth)
 
   - /group
     - /:groupID : GET
@@ -27,3 +37,4 @@
     - /:groupID : PUT (auth)
     - /:groupID : DELETE (auth)
     - /:groupID/statuses : GET (auth)
+    - /:groupID/status : POST (auth)

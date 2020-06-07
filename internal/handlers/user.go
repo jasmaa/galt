@@ -10,8 +10,10 @@ import (
 
 // APIUser represents a user in API response
 type APIUser struct {
-	ID       string `form:"id" json:"id" binding:"required"`
-	Username string `form:"username" json:"username" binding:"required"`
+	ID            string `form:"id" json:"id" binding:"required"`
+	Username      string `form:"username" json:"username" binding:"required"`
+	Description   string `form:"description" json:"description" binding:"required"`
+	ProfileImgURL string `form:"profileImgURL" json:"profileImgURL" binding:"required"`
 }
 
 // GetUser gets user by id
@@ -31,8 +33,10 @@ func GetUser() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"user": APIUser{
-				ID:       user.ID,
-				Username: user.Username,
+				ID:            user.ID,
+				Username:      user.Username,
+				Description:   user.Description,
+				ProfileImgURL: user.ProfileImgURL,
 			},
 		})
 	}
@@ -55,8 +59,10 @@ func GetProfile() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"user": APIUser{
-				ID:       user.ID,
-				Username: user.Username,
+				ID:            user.ID,
+				Username:      user.Username,
+				Description:   user.Description,
+				ProfileImgURL: user.ProfileImgURL,
 			},
 		})
 	}

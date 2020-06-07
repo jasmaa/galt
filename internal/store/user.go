@@ -4,9 +4,11 @@ import "errors"
 
 // User is a site user
 type User struct {
-	ID           string
-	Username     string
-	PasswordHash string
+	ID            string
+	Username      string
+	PasswordHash  string
+	Description   string
+	ProfileImgURL string
 }
 
 // InsertUser inserts user into db
@@ -24,7 +26,7 @@ func (s *Store) InsertUser(user User) error {
 
 	// Insert user
 	_, err := s.db.Exec(
-		"INSERT INTO users (id, username, password) VALUES ($1, $2, $3)",
+		"INSERT INTO users (id, username, password, description, profile_img_url) VALUES ($1, $2, $3, '', '')",
 		user.ID, user.Username, user.PasswordHash,
 	)
 	if err != nil {
@@ -37,10 +39,10 @@ func (s *Store) InsertUser(user User) error {
 // GetUserByID gets user by id from db
 func (s *Store) GetUserByID(id string) (*User, error) {
 
-	row := s.db.QueryRow("SELECT id, username, password FROM users WHERE id=$1", id)
+	row := s.db.QueryRow("SELECT id, username, password, description, profile_img_url FROM users WHERE id=$1", id)
 
 	user := User{}
-	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Description, &user.ProfileImgURL); err != nil {
 		return nil, errors.New("No user found")
 	}
 
@@ -50,10 +52,10 @@ func (s *Store) GetUserByID(id string) (*User, error) {
 // GetUserByUsername gets user by username from db
 func (s *Store) GetUserByUsername(username string) (*User, error) {
 
-	row := s.db.QueryRow("SELECT id, username, password FROM users WHERE username=$1", username)
+	row := s.db.QueryRow("SELECT id, username, password, description, profile_img_url FROM users WHERE username=$1", username)
 
 	user := User{}
-	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Description, &user.ProfileImgURL); err != nil {
 		return nil, errors.New("No user found")
 	}
 
