@@ -75,9 +75,9 @@ func Login(hmacSecret string) gin.HandlerFunc {
 
 		// Create JWT token with claims
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"username": user.Username,
-			"iat":      time.Now().Unix(),
-			"exp":      time.Now().Add(time.Hour * time.Duration(24)).Unix(),
+			"userID": user.ID,
+			"iat":    time.Now().Unix(),
+			"exp":    time.Now().Add(time.Hour * time.Duration(24)).Unix(),
 		})
 		tokenString, err := token.SignedString([]byte(hmacSecret))
 

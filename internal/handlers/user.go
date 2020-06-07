@@ -47,9 +47,9 @@ func GetProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		username := c.MustGet("username").(string)
+		userID := c.MustGet("userID").(string)
 
-		user, err := s.GetUserByUsername(username)
+		user, err := s.GetUserByID(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -73,9 +73,9 @@ func DeleteProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		username := c.MustGet("username").(string)
+		userID := c.MustGet("userID").(string)
 
-		err := s.DeleteUserByUsername(username)
+		err := s.DeleteUserByID(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

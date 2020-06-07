@@ -37,9 +37,9 @@ func (s *Store) InsertUser(user User) error {
 }
 
 // GetUserByID gets user by id from db
-func (s *Store) GetUserByID(id string) (*User, error) {
+func (s *Store) GetUserByID(userID string) (*User, error) {
 
-	row := s.db.QueryRow("SELECT id, username, password, description, profile_img_url FROM users WHERE id=$1", id)
+	row := s.db.QueryRow("SELECT id, username, password, description, profile_img_url FROM users WHERE id=$1", userID)
 
 	user := User{}
 	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Description, &user.ProfileImgURL); err != nil {
@@ -62,13 +62,10 @@ func (s *Store) GetUserByUsername(username string) (*User, error) {
 	return &user, nil
 }
 
-// DeleteUserByUsername deletes user by username
-func (s *Store) DeleteUserByUsername(username string) error {
+// DeleteUserByID deletes user by username
+func (s *Store) DeleteUserByID(userID string) error {
 
-	_, err := s.db.Exec(
-		"DELETE FROM users WHERE username=$1",
-		username,
-	)
+	_, err := s.db.Exec("DELETE FROM users WHERE id=$1", userID)
 	if err != nil {
 		return errors.New("Error deleting user")
 	}

@@ -46,7 +46,7 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("username", claims["username"])
+			c.Set("userID", claims["userID"])
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{
