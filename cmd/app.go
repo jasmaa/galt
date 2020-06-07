@@ -55,6 +55,11 @@ func main() {
 	v1.PUT("/user", middleware.AuthUser(hmacSecret), handlers.UpdateProfile())
 	v1.DELETE("/user", middleware.AuthUser(hmacSecret), handlers.DeleteProfile())
 
+	v1.GET("/status/:statusID", handlers.GetStatus())
+	v1.POST("/status", middleware.AuthUser(hmacSecret), handlers.PostStatus())
+	v1.PUT("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.UpdateStatus())
+	v1.DELETE("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

@@ -17,8 +17,11 @@ CREATE TABLE statuses (
 
 CREATE TABLE comments (
     id VARCHAR(255) PRIMARY KEY NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     status_id VARCHAR(255) NOT NULL,
     parent_comment_id VARCHAR(255) NOT NULL,
+    content VARCHAR(255) NOT NULL, 
+    FOREIGN KEY(user_id) REFERENCES users(id),
     FOREIGN KEY(status_id) REFERENCES statuses(id),
     FOREIGN KEY(parent_comment_id) REFERENCES comments(id)
 );
