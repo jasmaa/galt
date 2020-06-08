@@ -24,7 +24,7 @@ func CreateAccount() gin.HandlerFunc {
 		// TODO: input validation
 
 		if len(username) <= 0 || len(password) <= 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "No username or password entered",
 			})
 			return

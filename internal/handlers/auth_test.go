@@ -9,7 +9,6 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jasmaa/galt/internal/handlers"
@@ -17,11 +16,12 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
+// TODO: figure out where to put this
 func setupRouter(s store.Store) *gin.Engine {
 
 	gin.SetMode(gin.ReleaseMode)
 
-	hmacSecret := "some_secret"
+	hmacSecret := "secret_key"
 
 	// Router
 	r := gin.New()
@@ -50,7 +50,8 @@ func setupRouter(s store.Store) *gin.Engine {
 	return r
 }
 
-func TestCreateAccount(t *testing.T) {
+// TestCreateAccountSuccess tests create account with valid credentials
+func TestCreateAccountSuccess(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -58,12 +59,12 @@ func TestCreateAccount(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
-	mock.ExpectQuery("SELECT (.+) FROM users").
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE username=?").
 		WithArgs("testuser").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	mock.ExpectExec("INSERT INTO users").
 		WithArgs(sqlmock.AnyArg(), "testuser", sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(0, 0))
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Create account
 	data := url.Values{}
@@ -85,6 +86,32 @@ func TestCreateAccount(t *testing.T) {
 	}
 }
 
+// TestCreateAccountFail1 tests create account with no username or password
+func TestCreateAccountFail1(t *testing.T) {
+
+	// Setup
+	s := store.Store{}
+	_ = s.OpenMock()
+	defer s.Close()
+	r := setupRouter(s)
+
+	// Create account
+	data := url.Values{}
+	data.Set("username", "testuser")
+	data.Set("password", "")
+	req, err := http.NewRequest("POST", "/api/v1/createAccount", bytes.NewBufferString(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+// TestLoginSuccess tests login with correct username and password
 func TestLoginSuccess(t *testing.T) {
 
 	// Setup
@@ -93,7 +120,7 @@ func TestLoginSuccess(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
-	mock.ExpectQuery("SELECT (.+) FROM users").
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE username=?").
 		WithArgs("testuser").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
 			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
@@ -112,6 +139,73 @@ func TestLoginSuccess(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+// TestLoginFail1 tests login with unregistered username
+func TestLoginFail1(t *testing.T) {
+
+	// Setup
+	s := store.Store{}
+	mock := s.OpenMock()
+	defer s.Close()
+	r := setupRouter(s)
+
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE username=?").
+		WithArgs("invaliduser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}))
+
+	// Login
+	data := url.Values{}
+	data.Set("username", "invaliduser")
+	data.Set("password", "testpassword")
+	req, err := http.NewRequest("POST", "/api/v1/login", bytes.NewBufferString(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+// TestLoginFail2 tests correct username incorrect password
+func TestLoginFail2(t *testing.T) {
+
+	// Setup
+	s := store.Store{}
+	mock := s.OpenMock()
+	defer s.Close()
+	r := setupRouter(s)
+
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE username=?").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
+
+	// Login
+	data := url.Values{}
+	data.Set("username", "testuser")
+	data.Set("password", "invalidpassword")
+	req, err := http.NewRequest("POST", "/api/v1/login", bytes.NewBufferString(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
