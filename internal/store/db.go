@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 )
 
 // Store wraps database connection
@@ -33,6 +35,19 @@ func (s *Store) Open() {
 	}
 
 	s.db = db
+}
+
+// OpenMock opens mock database
+func (s *Store) OpenMock() sqlmock.Sqlmock {
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.db = db
+
+	return mock
 }
 
 // Close closes database connection
