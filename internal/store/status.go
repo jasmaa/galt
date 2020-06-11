@@ -1,6 +1,8 @@
 package store
 
-import "errors"
+import (
+	"errors"
+)
 
 // Status is a status post
 type Status struct {

@@ -1,6 +1,8 @@
 package store
 
-import "errors"
+import (
+	"errors"
+)
 
 // User is a site user
 type User struct {

@@ -50,7 +50,6 @@ func setupRouter(s store.Store) *gin.Engine {
 	return r
 }
 
-// TestCreateAccountSuccess tests create account with valid credentials
 func TestCreateAccountSuccess(t *testing.T) {
 
 	// Setup
@@ -86,8 +85,7 @@ func TestCreateAccountSuccess(t *testing.T) {
 	}
 }
 
-// TestCreateAccountFail1 tests create account with no username or password
-func TestCreateAccountFail1(t *testing.T) {
+func TestCreateAccountFailNoCredentials(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -111,7 +109,6 @@ func TestCreateAccountFail1(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
-// TestLoginSuccess tests login with correct username and password
 func TestLoginSuccess(t *testing.T) {
 
 	// Setup
@@ -125,7 +122,7 @@ func TestLoginSuccess(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
 			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
 
-	// Create account
+	// Login
 	data := url.Values{}
 	data.Set("username", "testuser")
 	data.Set("password", "testpassword")
@@ -145,8 +142,7 @@ func TestLoginSuccess(t *testing.T) {
 	}
 }
 
-// TestLoginFail1 tests login with unregistered username
-func TestLoginFail1(t *testing.T) {
+func TestLoginFailUnregisteredUser(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -178,8 +174,7 @@ func TestLoginFail1(t *testing.T) {
 	}
 }
 
-// TestLoginFail2 tests correct username incorrect password
-func TestLoginFail2(t *testing.T) {
+func TestLoginFailBadPassword(t *testing.T) {
 
 	// Setup
 	s := store.Store{}

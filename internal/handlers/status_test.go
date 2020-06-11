@@ -13,7 +13,7 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-func TestGetUserSuccess(t *testing.T) {
+func TestGetStatusSuccess(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -21,13 +21,17 @@ func TestGetUserSuccess(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
+	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content"}).
+			AddRow("abcde", "12345", "I posted this status"))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
 			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
 
-	// Get user
-	req, err := http.NewRequest("GET", "/api/v1/user/12345", nil)
+	// Get status
+	req, err := http.NewRequest("GET", "/api/v1/status/abcde", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +46,7 @@ func TestGetUserSuccess(t *testing.T) {
 	}
 }
 
-func TestGetProfileSuccess(t *testing.T) {
+func TestPostStatusSuccess(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -50,50 +54,18 @@ func TestGetProfileSuccess(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
-		WithArgs("12345").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
-			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
-
-	// Get personal profile
-	req, err := http.NewRequest("GET", "/api/v1/user", nil)
-	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
-
-func TestUpdateProfileSuccess1(t *testing.T) {
-
-	// Setup
-	s := store.Store{}
-	mock := s.OpenMock()
-	defer s.Close()
-	r := setupRouter(s)
-
-	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
-		WithArgs("12345").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
-			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
-	mock.ExpectExec("UPDATE users").
-		WithArgs("12345", "leaf", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "I like to plant trees and eat eggplants.", "eggplant.png").
+	mock.ExpectExec("INSERT INTO statuses").
+		WithArgs(sqlmock.AnyArg(), "12345", "I got a bear today!").
 		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
+		WithArgs("12345").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
 
-	// Update personal profile
+	// Post status
 	data := url.Values{}
-	data.Set("username", "leaf")
-	data.Set("description", "I like to plant trees and eat eggplants.")
-	data.Set("profileImgURL", "eggplant.png")
-	req, err := http.NewRequest("PUT", "/api/v1/user", bytes.NewBufferString(data.Encode()))
+	data.Set("content", "I got a bear today!")
+	req, err := http.NewRequest("POST", "/api/v1/status", bytes.NewBufferString(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
 	if err != nil {
@@ -110,7 +82,7 @@ func TestUpdateProfileSuccess1(t *testing.T) {
 	}
 }
 
-func TestUpdateProfileSuccess2(t *testing.T) {
+func TestUpdateStatusSuccess(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -118,18 +90,22 @@ func TestUpdateProfileSuccess2(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
+	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content"}).
+			AddRow("abcde", "12345", "I posted this status"))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
 			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
-	mock.ExpectExec("UPDATE users").
-		WithArgs("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", "eggplant.png").
+	mock.ExpectExec("UPDATE statuses").
+		WithArgs("abcde", "I got a bear today!").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Update personal profile
+	// Post status
 	data := url.Values{}
-	data.Set("profileImgURL", "eggplant.png")
-	req, err := http.NewRequest("PUT", "/api/v1/user", bytes.NewBufferString(data.Encode()))
+	data.Set("content", "I got a bear today!")
+	req, err := http.NewRequest("PUT", "/api/v1/status/abcde", bytes.NewBufferString(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
 	if err != nil {
@@ -146,7 +122,7 @@ func TestUpdateProfileSuccess2(t *testing.T) {
 	}
 }
 
-func TestDeleteProfileSuccess(t *testing.T) {
+func TestUpdateStatusFailUnauthorized(t *testing.T) {
 
 	// Setup
 	s := store.Store{}
@@ -154,12 +130,58 @@ func TestDeleteProfileSuccess(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
-	mock.ExpectExec("DELETE FROM users WHERE id=?").
+	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content"}).
+			AddRow("abcde", "67890", "this is my first post"))
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
+
+	// Post status
+	data := url.Values{}
+	data.Set("content", "I got a bear today!")
+	req, err := http.NewRequest("PUT", "/api/v1/status/abcde", bytes.NewBufferString(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestDeleteStatusSuccess(t *testing.T) {
+
+	// Setup
+	s := store.Store{}
+	mock := s.OpenMock()
+	defer s.Close()
+	r := setupRouter(s)
+
+	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content"}).
+			AddRow("abcde", "12345", "I posted this status"))
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
+		WithArgs("12345").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
+	mock.ExpectExec("DELETE FROM statuses").
+		WithArgs("abcde").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Delete personal profile
-	req, err := http.NewRequest("DELETE", "/api/v1/user", nil)
+	// Delete status
+	req, err := http.NewRequest("DELETE", "/api/v1/status/abcde", nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +191,41 @@ func TestDeleteProfileSuccess(t *testing.T) {
 	r.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestDeleteStatusFailUnauthorized(t *testing.T) {
+
+	// Setup
+	s := store.Store{}
+	mock := s.OpenMock()
+	defer s.Close()
+	r := setupRouter(s)
+
+	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content"}).
+			AddRow("abcde", "67890", "I posted this status"))
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
+		WithArgs("12345").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
+
+	// Delete status
+	req, err := http.NewRequest("DELETE", "/api/v1/status/abcde", nil)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiIxMjM0NSIsImV4cCI6Ijk5OTk5OTk5OTk5OTk5OTkiLCJpYXQiOjE1MTYyMzkwMjJ9.M0It6-c6VJITiXp6WVgC-tNJdX5uB-YYqN2uJ75uzto")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
