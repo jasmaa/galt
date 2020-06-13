@@ -16,6 +16,16 @@ type APIUser struct {
 	ProfileImgURL string `form:"profileImgURL" json:"profileImgURL" binding:"required"`
 }
 
+// buildUserResponse builds API user response
+func buildUserResponse(user store.User) APIUser {
+	return APIUser{
+		ID:            user.ID,
+		Username:      user.Username,
+		Description:   user.Description,
+		ProfileImgURL: user.ProfileImgURL,
+	}
+}
+
 // GetUser gets user by id
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -31,14 +41,7 @@ func GetUser() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-		})
+		c.JSON(http.StatusOK, buildUserResponse(*user))
 	}
 }
 
@@ -57,14 +60,7 @@ func GetProfile() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-		})
+		c.JSON(http.StatusOK, buildUserResponse(*user))
 	}
 }
 
@@ -106,14 +102,7 @@ func UpdateProfile() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-		})
+		c.JSON(http.StatusOK, buildUserResponse(*user))
 	}
 }
 

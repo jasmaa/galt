@@ -21,6 +21,8 @@ type APIStatus struct {
 	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
 }
 
+// TODO: figure out response for auth vs not auth
+// buildStatusResponse builds API status response
 func buildStatusResponse(poster store.User, status store.Status, statusLikes int) APIStatus {
 	return APIStatus{
 		ID: status.ID,

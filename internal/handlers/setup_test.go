@@ -49,6 +49,8 @@ func setupRouter(s store.Store) *gin.Engine {
 	v1.POST("/status", middleware.AuthUser(hmacSecret), handlers.PostStatus())
 	v1.PUT("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.UpdateStatus())
 	v1.DELETE("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
+	v1.POST("/status/:statusID/like", middleware.AuthUser(hmacSecret), handlers.LikeStatus())
+	v1.POST("/status/:statusID/unlike", middleware.AuthUser(hmacSecret), handlers.UnikeStatus())
 
 	return r
 }
