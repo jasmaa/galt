@@ -24,12 +24,16 @@ func TestGetStatusSuccess(t *testing.T) {
 
 	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
 		WithArgs("abcde").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "likes", "reshares", "posted_timestamp", "is_edited"}).
-			AddRow("abcde", "12345", "I posted this status", 0, 0, time.Now(), false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "posted_timestamp", "is_edited"}).
+			AddRow("abcde", "12345", "I posted this status", time.Now(), false))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
 			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
+	mock.ExpectQuery("SELECT COUNT(.+) FROM status_like_pairs").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).
+			AddRow(0))
 
 	// Get status
 	req, err := http.NewRequest("GET", "/api/v1/status/abcde", nil)
@@ -56,7 +60,7 @@ func TestPostStatusSuccess(t *testing.T) {
 	r := setupRouter(s)
 
 	mock.ExpectExec("INSERT INTO statuses").
-		WithArgs(sqlmock.AnyArg(), "12345", "I got a bear today!", 0, 0, AnyTime{}, false).
+		WithArgs(sqlmock.AnyArg(), "12345", "I got a bear today!", AnyTime{}, false).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
@@ -93,8 +97,8 @@ func TestUpdateStatusSuccess(t *testing.T) {
 
 	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
 		WithArgs("abcde").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "likes", "reshares", "posted_timestamp", "is_edited"}).
-			AddRow("abcde", "12345", "I posted this status", 0, 0, time.Now(), false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "posted_timestamp", "is_edited"}).
+			AddRow("abcde", "12345", "I posted this status", time.Now(), false))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
@@ -102,6 +106,10 @@ func TestUpdateStatusSuccess(t *testing.T) {
 	mock.ExpectExec("UPDATE statuses").
 		WithArgs("abcde", "I got a bear today!", AnyTime{}, true).
 		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("SELECT COUNT(.+) FROM status_like_pairs").
+		WithArgs("abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).
+			AddRow(0))
 
 	// Post status
 	data := url.Values{}
@@ -133,8 +141,8 @@ func TestUpdateStatusFailUnauthorized(t *testing.T) {
 
 	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
 		WithArgs("abcde").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "likes", "reshares", "posted_timestamp", "is_edited"}).
-			AddRow("abcde", "67890", "this is my first post", 0, 0, time.Now(), false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "posted_timestamp", "is_edited"}).
+			AddRow("abcde", "67890", "this is my first post", time.Now(), false))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
@@ -170,8 +178,8 @@ func TestDeleteStatusSuccess(t *testing.T) {
 
 	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
 		WithArgs("abcde").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "likes", "reshares", "posted_timestamp", "is_edited"}).
-			AddRow("abcde", "12345", "I posted this status", 0, 0, time.Now(), false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "posted_timestamp", "is_edited"}).
+			AddRow("abcde", "12345", "I posted this status", time.Now(), false))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
@@ -208,8 +216,8 @@ func TestDeleteStatusFailUnauthorized(t *testing.T) {
 
 	mock.ExpectQuery("SELECT (.+) FROM statuses WHERE id=?").
 		WithArgs("abcde").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "likes", "reshares", "posted_timestamp", "is_edited"}).
-			AddRow("abcde", "67890", "I posted this status", 0, 0, time.Now(), false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "content", "posted_timestamp", "is_edited"}).
+			AddRow("abcde", "67890", "I posted this status", time.Now(), false))
 	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).

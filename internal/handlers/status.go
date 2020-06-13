@@ -13,6 +13,7 @@ import (
 // APIStatus represents a status in API response
 type APIStatus struct {
 	ID              string    `form:"id" json:"id" binding:"required"`
+	Poster          APIUser   `form:"poster" json:"poster" binding:"required"`
 	Content         string    `form:"content" json:"content" binding:"required"`
 	Likes           int       `form:"likes" json:"likes" binding:"required"`
 	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
@@ -20,22 +21,20 @@ type APIStatus struct {
 	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
 }
 
-func buildStatusResponse(user store.User, status store.Status) gin.H {
-	return gin.H{
-		"user": APIUser{
-			ID:            user.ID,
-			Username:      user.Username,
-			Description:   user.Description,
-			ProfileImgURL: user.ProfileImgURL,
+func buildStatusResponse(poster store.User, status store.Status, statusLikes int) APIStatus {
+	return APIStatus{
+		ID: status.ID,
+		Poster: APIUser{
+			ID:            poster.ID,
+			Username:      poster.Username,
+			Description:   poster.Description,
+			ProfileImgURL: poster.ProfileImgURL,
 		},
-		"status": APIStatus{
-			ID:              status.ID,
-			Content:         status.Content,
-			Likes:           status.Likes,
-			Reshares:        status.Reshares,
-			PostedTimestamp: status.PostedTimestamp,
-			IsEdited:        status.IsEdited,
-		},
+		Content:         status.Content,
+		Likes:           statusLikes,
+		Reshares:        -1,
+		PostedTimestamp: status.PostedTimestamp,
+		IsEdited:        status.IsEdited,
 	}
 }
 
@@ -62,7 +61,15 @@ func GetStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
+		statusLikes, err := s.GetStatusLikes(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
 	}
 }
 
@@ -83,8 +90,6 @@ func PostStatus() gin.HandlerFunc {
 			ID:              statusID,
 			UserID:          userID,
 			Content:         content,
-			Likes:           0,
-			Reshares:        0,
 			PostedTimestamp: time.Now(),
 			IsEdited:        false,
 		}
@@ -104,7 +109,7 @@ func PostStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, status))
+		c.JSON(http.StatusOK, buildStatusResponse(*user, status, 0))
 	}
 }
 
@@ -157,7 +162,105 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
+		statusLikes, err := s.GetStatusLikes(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+	}
+}
+
+// LikeStatus likes status
+func LikeStatus() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		userID := c.MustGet("userID").(string)
+		statusID := c.Param("statusID")
+
+		status, err := s.GetStatusByID(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Update status likes
+		err = s.InsertStatusLikePair(userID, statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		statusLikes, err := s.GetStatusLikes(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+	}
+}
+
+// UnikeStatus unlikes status
+func UnikeStatus() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		userID := c.MustGet("userID").(string)
+		statusID := c.Param("statusID")
+
+		status, err := s.GetStatusByID(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Update status likes
+		err = s.DeleteStatusLikePair(userID, statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		statusLikes, err := s.GetStatusLikes(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
 	}
 }
 
@@ -202,6 +305,6 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, 0))
 	}
 }
