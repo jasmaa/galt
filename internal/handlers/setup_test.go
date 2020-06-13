@@ -1,12 +1,23 @@
 package handlers_test
 
 import (
+	"database/sql/driver"
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/jasmaa/galt/internal/handlers"
 	"github.com/jasmaa/galt/internal/middleware"
 	"github.com/jasmaa/galt/internal/store"
 )
+
+type AnyTime struct{}
+
+// Match satisfies sqlmock.Argument interface
+func (a AnyTime) Match(v driver.Value) bool {
+	_, ok := v.(time.Time)
+	return ok
+}
 
 // setupRouter sets up router for test
 func setupRouter(s store.Store) *gin.Engine {

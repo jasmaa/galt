@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -11,8 +12,31 @@ import (
 
 // APIStatus represents a status in API response
 type APIStatus struct {
-	ID      string `form:"id" json:"id" binding:"required"`
-	Content string `form:"content" json:"content" binding:"required"`
+	ID              string    `form:"id" json:"id" binding:"required"`
+	Content         string    `form:"content" json:"content" binding:"required"`
+	Likes           int       `form:"likes" json:"likes" binding:"required"`
+	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
+	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
+	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
+}
+
+func buildStatusResponse(user store.User, status store.Status) gin.H {
+	return gin.H{
+		"user": APIUser{
+			ID:            user.ID,
+			Username:      user.Username,
+			Description:   user.Description,
+			ProfileImgURL: user.ProfileImgURL,
+		},
+		"status": APIStatus{
+			ID:              status.ID,
+			Content:         status.Content,
+			Likes:           status.Likes,
+			Reshares:        status.Reshares,
+			PostedTimestamp: status.PostedTimestamp,
+			IsEdited:        status.IsEdited,
+		},
+	}
 }
 
 // GetStatus gets status by id
@@ -38,18 +62,7 @@ func GetStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-			"status": APIStatus{
-				ID:      status.ID,
-				Content: status.Content,
-			},
-		})
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
 	}
 }
 
@@ -66,11 +79,16 @@ func PostStatus() gin.HandlerFunc {
 		// TODO: Add content filtering here??
 
 		// Insert status
-		err := s.InsertStatus(store.Status{
-			ID:      statusID,
-			UserID:  userID,
-			Content: content,
-		})
+		status := store.Status{
+			ID:              statusID,
+			UserID:          userID,
+			Content:         content,
+			Likes:           0,
+			Reshares:        0,
+			PostedTimestamp: time.Now(),
+			IsEdited:        false,
+		}
+		err := s.InsertStatus(status)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -86,18 +104,7 @@ func PostStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-			"status": APIStatus{
-				ID:      statusID,
-				Content: content,
-			},
-		})
+		c.JSON(http.StatusOK, buildStatusResponse(*user, status))
 	}
 }
 
@@ -135,10 +142,12 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
+		// TODO: validate content
+
 		// Update status
-		if len(content) > 0 {
-			status.Content = content
-		}
+		status.Content = content
+		status.PostedTimestamp = time.Now()
+		status.IsEdited = true
 
 		err = s.UpdateStatus(*status)
 		if err != nil {
@@ -148,18 +157,7 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-			"status": APIStatus{
-				ID:      status.ID,
-				Content: status.Content,
-			},
-		})
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
 	}
 }
 
@@ -204,17 +202,6 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"user": APIUser{
-				ID:            user.ID,
-				Username:      user.Username,
-				Description:   user.Description,
-				ProfileImgURL: user.ProfileImgURL,
-			},
-			"status": APIStatus{
-				ID:      status.ID,
-				Content: status.Content,
-			},
-		})
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status))
 	}
 }
