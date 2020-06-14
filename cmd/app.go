@@ -61,6 +61,16 @@ func main() {
 	v1.DELETE("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
 	v1.POST("/status/:statusID/like", middleware.AuthUser(hmacSecret), handlers.LikeStatus())
 	v1.POST("/status/:statusID/unlike", middleware.AuthUser(hmacSecret), handlers.UnikeStatus())
+	v1.GET("/status/:statusID/comments", handlers.GetComments())
+	v1.POST("/status/:statusID/comment", middleware.AuthUser(hmacSecret), handlers.PostComment())
+
+	/*
+		v1.GET("/comment/:commentID", handlers.GetStatus())
+		v1.PUT("/comment/:commentID", middleware.AuthUser(hmacSecret), handlers.UpdateStatus())
+		v1.DELETE("/comment/:commentID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
+		v1.POST("/comment/:commentID/like", middleware.AuthUser(hmacSecret), handlers.LikeStatus())
+		v1.POST("/comment/:commentID/unlike", middleware.AuthUser(hmacSecret), handlers.UnikeStatus())
+	*/
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

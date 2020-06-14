@@ -1,7 +1,9 @@
 package store
 
 import (
+	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -10,7 +12,7 @@ type Comment struct {
 	ID              string
 	UserID          string
 	StatusID        string
-	ParentCommentID string
+	ParentCommentID sql.NullString
 	Content         string
 	PostedTimestamp time.Time
 	IsEdited        bool
@@ -32,14 +34,40 @@ func (s *Store) GetCommentByID(commentID string) (*Comment, error) {
 	return &comment, nil
 }
 
+// GetCommentsFromStatus gets comments under a status
+func (s *Store) GetCommentsFromStatus(statusID string) (map[string]Comment, error) {
+
+	rows, err := s.db.Query(
+		"SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited FROM comments WHERE status_id=$1",
+		statusID,
+	)
+	defer rows.Close()
+	if err != nil {
+		return nil, errors.New("Error retrieving comments")
+	}
+
+	comments := make(map[string]Comment)
+
+	for rows.Next() {
+		comment := Comment{}
+		rows.Scan(&comment.ID, &comment.UserID, &comment.StatusID, &comment.ParentCommentID, &comment.Content, &comment.PostedTimestamp, &comment.IsEdited)
+		comments[comment.ID] = comment
+	}
+
+	return comments, nil
+}
+
 // InsertComment inserts comment
 func (s *Store) InsertComment(comment Comment) error {
 
 	_, err := s.db.Exec(
-		"INSERT INTO comment (id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited) VALUES ($1, $2, $3, $4, $5)",
+		"INSERT INTO comments (id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 		comment.ID, comment.UserID, comment.StatusID, comment.ParentCommentID, comment.Content, comment.PostedTimestamp, comment.IsEdited,
 	)
 	if err != nil {
+
+		fmt.Println(err)
+
 		return errors.New("Error creating comment")
 	}
 

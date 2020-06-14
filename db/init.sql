@@ -21,7 +21,7 @@ CREATE TABLE comments (
     id VARCHAR(255) PRIMARY KEY NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     status_id VARCHAR(255) NOT NULL,
-    parent_comment_id VARCHAR(255) NOT NULL,
+    parent_comment_id VARCHAR(255),
     content VARCHAR(255) NOT NULL, 
     posted_timestamp TIMESTAMP NOT NULL,
     is_edited BOOLEAN NOT NULL,
