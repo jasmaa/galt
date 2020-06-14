@@ -10,23 +10,23 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-// APIStatus represents a status in API response
-type APIStatus struct {
+// apiStatus represents a status in API response
+type apiStatus struct {
 	ID              string    `form:"id" json:"id" binding:"required"`
-	Poster          APIUser   `form:"poster" json:"poster" binding:"required"`
+	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
 	Content         string    `form:"content" json:"content" binding:"required"`
+	IsLiked         bool      `form:"isLiked" json:"isLiked" binding:"required"`
 	Likes           int       `form:"likes" json:"likes" binding:"required"`
 	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
 	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
 	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
 }
 
-// TODO: figure out response for auth vs not auth
 // buildStatusResponse builds API status response
-func buildStatusResponse(poster store.User, status store.Status, statusLikes int) APIStatus {
-	return APIStatus{
+func buildStatusResponse(poster store.User, status store.Status, statusLikes int, isLiked bool, isReshared bool) apiStatus {
+	return apiStatus{
 		ID: status.ID,
-		Poster: APIUser{
+		Poster: apiUser{
 			ID:            poster.ID,
 			Username:      poster.Username,
 			Description:   poster.Description,
@@ -34,7 +34,8 @@ func buildStatusResponse(poster store.User, status store.Status, statusLikes int
 		},
 		Content:         status.Content,
 		Likes:           statusLikes,
-		Reshares:        -1,
+		IsLiked:         isLiked,
+		Reshares:        -1, // filler value for now
 		PostedTimestamp: status.PostedTimestamp,
 		IsEdited:        status.IsEdited,
 	}
@@ -46,6 +47,7 @@ func GetStatus() gin.HandlerFunc {
 
 		s := c.MustGet("store").(store.Store)
 		statusID := c.Param("statusID")
+		authUserID := c.MustGet("authUserID").(string)
 
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
@@ -71,7 +73,20 @@ func GetStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
+		} else {
+
+			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
+		}
 	}
 }
 
@@ -82,15 +97,22 @@ func PostStatus() gin.HandlerFunc {
 		s := c.MustGet("store").(store.Store)
 
 		statusID := uuid.New().String()
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		content := c.PostForm("content")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		// TODO: Add content filtering here??
 
 		// Insert status
 		status := store.Status{
 			ID:              statusID,
-			UserID:          userID,
+			UserID:          authUserID,
 			Content:         content,
 			PostedTimestamp: time.Now(),
 			IsEdited:        false,
@@ -103,7 +125,7 @@ func PostStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -111,7 +133,7 @@ func PostStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, status, 0))
+		c.JSON(http.StatusOK, buildStatusResponse(*user, status, 0, false, false))
 	}
 }
 
@@ -120,8 +142,15 @@ func UpdateStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		statusID := c.Param("statusID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		content := c.PostForm("content")
 
@@ -133,7 +162,7 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -172,7 +201,20 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
+		} else {
+
+			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
+		}
 	}
 }
 
@@ -181,8 +223,15 @@ func LikeStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		statusID := c.Param("statusID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
@@ -192,7 +241,7 @@ func LikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -201,7 +250,7 @@ func LikeStatus() gin.HandlerFunc {
 		}
 
 		// Update status likes
-		err = s.InsertStatusLikePair(userID, statusID)
+		err = s.InsertStatusLikePair(authUserID, statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -217,7 +266,20 @@ func LikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
+		} else {
+
+			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
+		}
 	}
 }
 
@@ -226,8 +288,15 @@ func UnikeStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		statusID := c.Param("statusID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
@@ -237,7 +306,7 @@ func UnikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -246,7 +315,7 @@ func UnikeStatus() gin.HandlerFunc {
 		}
 
 		// Update status likes
-		err = s.DeleteStatusLikePair(userID, statusID)
+		err = s.DeleteStatusLikePair(authUserID, statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -262,7 +331,20 @@ func UnikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes))
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
+		} else {
+
+			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
+		}
 	}
 }
 
@@ -271,8 +353,15 @@ func DeleteStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		statusID := c.Param("statusID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
@@ -282,7 +371,7 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -307,6 +396,6 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, 0))
+		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, 0, false, false))
 	}
 }

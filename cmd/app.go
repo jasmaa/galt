@@ -29,6 +29,7 @@ func main() {
 	// Setup db
 	s := store.Store{}
 	s.Open()
+	defer s.Close()
 
 	// Router
 	r := gin.New()
@@ -47,22 +48,24 @@ func main() {
 		c.Next()
 	})
 
+	v1.Use(middleware.AuthUser(hmacSecret))
+
 	v1.POST("/createAccount", handlers.CreateAccount())
 	v1.POST("/login", handlers.Login(hmacSecret))
 
 	v1.GET("/user/:userID", handlers.GetUser())
-	v1.GET("/user", middleware.AuthUser(hmacSecret), handlers.GetProfile())
-	v1.PUT("/user", middleware.AuthUser(hmacSecret), handlers.UpdateProfile())
-	v1.DELETE("/user", middleware.AuthUser(hmacSecret), handlers.DeleteProfile())
+	v1.GET("/user", handlers.GetProfile())
+	v1.PUT("/user", handlers.UpdateProfile())
+	v1.DELETE("/user", handlers.DeleteProfile())
 
 	v1.GET("/status/:statusID", handlers.GetStatus())
-	v1.POST("/status", middleware.AuthUser(hmacSecret), handlers.PostStatus())
-	v1.PUT("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.UpdateStatus())
-	v1.DELETE("/status/:statusID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
-	v1.POST("/status/:statusID/like", middleware.AuthUser(hmacSecret), handlers.LikeStatus())
-	v1.POST("/status/:statusID/unlike", middleware.AuthUser(hmacSecret), handlers.UnikeStatus())
+	v1.POST("/status", handlers.PostStatus())
+	v1.PUT("/status/:statusID", handlers.UpdateStatus())
+	v1.DELETE("/status/:statusID", handlers.DeleteStatus())
+	v1.POST("/status/:statusID/like", handlers.LikeStatus())
+	v1.POST("/status/:statusID/unlike", handlers.UnikeStatus())
 	v1.GET("/status/:statusID/comments", handlers.GetComments())
-	v1.POST("/status/:statusID/comment", middleware.AuthUser(hmacSecret), handlers.PostComment())
+	v1.POST("/status/:statusID/comment", handlers.PostComment())
 
 	/*
 		v1.GET("/comment/:commentID", handlers.GetStatus())

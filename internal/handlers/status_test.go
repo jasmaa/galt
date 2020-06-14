@@ -110,6 +110,10 @@ func TestUpdateStatusSuccess(t *testing.T) {
 		WithArgs("abcde").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).
 			AddRow(0))
+	mock.ExpectQuery("SELECT COUNT(.+) FROM status_like_pairs").
+		WithArgs("12345", "abcde").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).
+			AddRow(0))
 
 	// Post status
 	data := url.Values{}

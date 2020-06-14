@@ -11,10 +11,10 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-// APIComment represents a status in API response
-type APIComment struct {
+// apiComment represents a status in API response
+type apiComment struct {
 	ID              string    `form:"id" json:"id" binding:"required"`
-	Poster          APIUser   `form:"poster" json:"poster" binding:"required"`
+	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
 	Content         string    `form:"content" json:"content" binding:"required"`
 	Likes           int       `form:"likes" json:"likes" binding:"required"`
 	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
@@ -23,10 +23,10 @@ type APIComment struct {
 
 // TODO: figure out response for auth vs not auth
 // buildCommentResponse builds API comment response
-func buildCommentResponse(poster store.User, comment store.Comment, commentLikes int) APIComment {
-	return APIComment{
+func buildCommentResponse(poster store.User, comment store.Comment, commentLikes int) apiComment {
+	return apiComment{
 		ID: comment.ID,
-		Poster: APIUser{
+		Poster: apiUser{
 			ID:            poster.ID,
 			Username:      poster.Username,
 			Description:   poster.Description,
@@ -55,7 +55,7 @@ func GetComments() gin.HandlerFunc {
 		}
 
 		// TODO: do join instead??? or make client find user info instead??
-		apiComments := make(map[string]APIComment)
+		apiComments := make(map[string]interface{})
 		for k, v := range comments {
 
 			user, err := s.GetUserByID(v.UserID)
@@ -87,13 +87,13 @@ func PostComment() gin.HandlerFunc {
 
 		s := c.MustGet("store").(store.Store)
 		commentID := uuid.New().String()
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 		content := c.PostForm("content")
 		statusID := c.Param("statusID")
 
 		comment := store.Comment{
 			ID:              commentID,
-			UserID:          userID,
+			UserID:          authUserID,
 			StatusID:        statusID,
 			ParentCommentID: sql.NullString{},
 			Content:         content,
@@ -108,7 +108,7 @@ func PostComment() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

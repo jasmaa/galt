@@ -15,6 +15,13 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 
 		// Extract token
 		authHeader := c.GetHeader("Authorization")
+
+		if len(authHeader) == 0 {
+			c.Set("authUserID", "")
+			c.Next()
+			return
+		}
+
 		r := regexp.MustCompile(`Bearer ([\w-]+\.[\w-]+\.[\w-]+)`)
 		res := r.FindStringSubmatch(authHeader)
 		if len(res) != 2 {
@@ -46,7 +53,7 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("userID", claims["userID"])
+			c.Set("authUserID", claims["userID"])
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{

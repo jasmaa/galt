@@ -22,7 +22,7 @@ type Comment struct {
 func (s *Store) GetCommentByID(commentID string) (*Comment, error) {
 
 	row := s.db.QueryRow(
-		"SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited FROM comments WHERE id=$1",
+		`SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited FROM comments WHERE id=$1`,
 		commentID,
 	)
 

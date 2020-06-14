@@ -9,7 +9,7 @@ import (
 )
 
 // APIUser represents a user in API response
-type APIUser struct {
+type apiUser struct {
 	ID            string `form:"id" json:"id" binding:"required"`
 	Username      string `form:"username" json:"username" binding:"required"`
 	Description   string `form:"description" json:"description" binding:"required"`
@@ -17,8 +17,8 @@ type APIUser struct {
 }
 
 // buildUserResponse builds API user response
-func buildUserResponse(user store.User) APIUser {
-	return APIUser{
+func buildUserResponse(user store.User) apiUser {
+	return apiUser{
 		ID:            user.ID,
 		Username:      user.Username,
 		Description:   user.Description,
@@ -50,9 +50,16 @@ func GetProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 
-		user, err := s.GetUserByID(userID)
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -69,13 +76,20 @@ func UpdateProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
 
 		username := c.PostForm("username")
 		description := c.PostForm("description")
 		profileImgURL := c.PostForm("profileImgURL")
 
-		user, err := s.GetUserByID(userID)
+		user, err := s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -111,9 +125,16 @@ func DeleteProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		userID := c.MustGet("userID").(string)
+		authUserID := c.MustGet("authUserID").(string)
 
-		err := s.DeleteUserByID(userID)
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
+
+		err := s.DeleteUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
