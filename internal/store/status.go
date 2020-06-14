@@ -30,6 +30,34 @@ func (s *Store) GetStatusByID(statusID string) (*Status, error) {
 	return &status, nil
 }
 
+// GetUserFeed gets statuses in feed
+func (s *Store) GetUserFeed(userID string) (map[string]Status, error) {
+
+	rows, err := s.db.Query(
+		`SELECT id, user_id, content, posted_timestamp, is_edited
+		FROM statuses WHERE user_id IN (
+			SELECT circle_user_pairs.user_id
+			FROM circle_user_pairs JOIN circles ON circle_users_pairs.circle_id=circles.id
+			WHERE circles.user_id=$1
+		)`,
+		userID,
+	)
+	defer rows.Close()
+	if err != nil {
+		return nil, errors.New("Error retrieving feed")
+	}
+
+	statuses := make(map[string]Status)
+
+	for rows.Next() {
+		status := Status{}
+		rows.Scan(&status.ID, &status.UserID, &status.Content, &status.PostedTimestamp, &status.IsEdited)
+		statuses[status.ID] = status
+	}
+
+	return statuses, nil
+}
+
 // InsertStatus inserts status
 func (s *Store) InsertStatus(status Status) error {
 
@@ -83,8 +111,8 @@ func (s *Store) GetStatusLikes(statusID string) (int, error) {
 	return count, nil
 }
 
-// GetIsStatusLiked checks if status was liked by user
-func (s *Store) GetIsStatusLiked(userID string, statusID string) (bool, error) {
+// GetIsUserLikedStatus checks if status was liked by user
+func (s *Store) GetIsUserLikedStatus(userID string, statusID string) (bool, error) {
 
 	row := s.db.QueryRow("SELECT COUNT(status_id) FROM status_like_pairs WHERE user_id=$1 AND status_id=$2",
 		userID, statusID,
@@ -104,7 +132,7 @@ func (s *Store) GetIsStatusLiked(userID string, statusID string) (bool, error) {
 func (s *Store) InsertStatusLikePair(userID string, statusID string) error {
 
 	// Check for duplicate
-	isLiked, err := s.GetIsStatusLiked(userID, statusID)
+	isLiked, err := s.GetIsUserLikedStatus(userID, statusID)
 	if err != nil {
 		return err
 	}

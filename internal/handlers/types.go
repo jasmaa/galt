@@ -82,3 +82,19 @@ func buildCommentResponse(poster store.User, comment store.Comment, commentLikes
 		IsEdited:        comment.IsEdited,
 	}
 }
+
+// apiCircle represents a status in API response
+type apiCircle struct {
+	ID          string `form:"id" json:"id" binding:"required"`
+	Name        string `form:"name" json:"name" binding:"required"`
+	Description string `form:"description" json:"description" binding:"required"`
+}
+
+// buildStatusResponse builds API status response
+func buildCircleResponse(circle store.Circle) apiCircle {
+	return apiCircle{
+		ID:          circle.ID,
+		Name:        circle.Name,
+		Description: circle.Description,
+	}
+}

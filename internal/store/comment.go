@@ -3,7 +3,6 @@ package store
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -65,9 +64,6 @@ func (s *Store) InsertComment(comment Comment) error {
 		comment.ID, comment.UserID, comment.StatusID, comment.ParentCommentID, comment.Content, comment.PostedTimestamp, comment.IsEdited,
 	)
 	if err != nil {
-
-		fmt.Println(err)
-
 		return errors.New("Error creating comment")
 	}
 
@@ -113,8 +109,8 @@ func (s *Store) GetCommentLikes(commentID string) (int, error) {
 	return count, nil
 }
 
-// GetIsCommentLiked checks if comment was liked by user
-func (s *Store) GetIsCommentLiked(userID string, commentID string) (bool, error) {
+// GetIsUserLikedComment checks if comment was liked by user
+func (s *Store) GetIsUserLikedComment(userID string, commentID string) (bool, error) {
 
 	row := s.db.QueryRow("SELECT COUNT(comment_id) FROM comment_like_pairs WHERE user_id=$1 AND comment_id=$2",
 		userID, commentID,
@@ -134,7 +130,7 @@ func (s *Store) GetIsCommentLiked(userID string, commentID string) (bool, error)
 func (s *Store) InsertCommentLikePair(userID string, commentID string) error {
 
 	// Check for duplicate
-	isLiked, err := s.GetIsCommentLiked(userID, commentID)
+	isLiked, err := s.GetIsUserLikedComment(userID, commentID)
 	if err != nil {
 		return err
 	}

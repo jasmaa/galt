@@ -75,6 +75,13 @@ func main() {
 		v1.POST("/comment/:commentID/unlike", middleware.AuthUser(hmacSecret), handlers.UnikeStatus())
 	*/
 
+	v1.GET("/circle/:circleID", handlers.GetCircle())
+	v1.POST("/circle", handlers.CreateCircle())
+	v1.PUT("/circle/:circleID", handlers.UpdateCircle())
+	v1.DELETE("/circle/:circleID", handlers.DeleteCircle())
+	//v1.POST("/circle/:circleID/addUser", handlers.LikeStatus())
+	//v1.POST("/circle/:circleID/removeUser", handlers.UnikeStatus())
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

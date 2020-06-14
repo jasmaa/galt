@@ -47,7 +47,7 @@ func GetStatus() gin.HandlerFunc {
 			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
 		} else {
 
-			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -175,7 +175,7 @@ func UpdateStatus() gin.HandlerFunc {
 			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
 		} else {
 
-			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -240,7 +240,7 @@ func LikeStatus() gin.HandlerFunc {
 			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
 		} else {
 
-			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -305,7 +305,7 @@ func UnikeStatus() gin.HandlerFunc {
 			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
 		} else {
 
-			isLiked, err := s.GetIsStatusLiked(authUserID, statusID)
+			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
