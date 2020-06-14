@@ -202,3 +202,133 @@ func DeleteCircle() gin.HandlerFunc {
 		c.JSON(http.StatusOK, buildCircleResponse(*circle))
 	}
 }
+
+// AddUserToCircle adds user to circle
+func AddUserToCircle() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		authUserID := c.MustGet("authUserID").(string)
+		circleID := c.Param("circleID")
+		userID := c.PostForm("userID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
+
+		circle, err := s.GetCircleByID(circleID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(authUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Check if user owns circle
+		if user.ID != circle.UserID {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "You do not have permission to edit this status",
+			})
+			return
+		}
+
+		targetUser, err := s.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Add target user to circle
+		err = s.InsertCircleUserPair(targetUser.ID, circle.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+	}
+}
+
+// RemoveUserFromCircle removes user from circle
+func RemoveUserFromCircle() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		authUserID := c.MustGet("authUserID").(string)
+		circleID := c.Param("circleID")
+		userID := c.PostForm("userID")
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
+
+		// Target user cannot be auth user
+		if authUserID == userID {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Cannot add self to circle",
+			})
+			return
+		}
+
+		circle, err := s.GetCircleByID(circleID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(authUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Check if user owns circle
+		if user.ID != circle.UserID {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "You do not have permission to edit this status",
+			})
+			return
+		}
+
+		targetUser, err := s.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// Add target user to circle
+		err = s.DeleteCircleUserPair(targetUser.ID, circle.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+	}
+}

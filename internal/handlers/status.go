@@ -60,6 +60,70 @@ func GetStatus() gin.HandlerFunc {
 	}
 }
 
+// GetStatusFeed gets users feed
+func GetStatusFeed() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		authUserID := c.MustGet("authUserID").(string)
+
+		if len(authUserID) == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No token provided",
+			})
+			return
+		}
+
+		_, err := s.GetUserByID(authUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		statuses, err := s.GetStatusFeed(authUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		apiStatuses := make(map[string]interface{})
+		for k, v := range statuses {
+
+			user, err := s.GetUserByID(v.UserID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			statusLikes, err := s.GetStatusLikes(v.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			isLiked, err := s.GetIsUserLikedStatus(authUserID, v.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			apiStatuses[k] = buildStatusResponse(*user, v, statusLikes, isLiked, false)
+		}
+
+		c.JSON(http.StatusOK, apiStatuses)
+	}
+}
+
 // PostStatus posts new status
 func PostStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {

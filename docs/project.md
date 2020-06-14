@@ -12,6 +12,7 @@
 
   - /status
     - /:statusID : GET
+    - / : GET (auth)
     - / : POST (auth)
     - /:statusID : PUT (auth)
     - /:statusID : DELETE (auth)

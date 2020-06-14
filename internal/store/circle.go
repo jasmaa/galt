@@ -70,7 +70,7 @@ func (s *Store) DeleteCircleByID(circleID string) error {
 // GetIsInCircle checks if comment was liked by user
 func (s *Store) GetIsInCircle(userID string, circleID string) (bool, error) {
 
-	row := s.db.QueryRow("SELECT COUNT(circleID) FROM user_circle_pairs WHERE user_id=$1 AND circle_id=$2",
+	row := s.db.QueryRow("SELECT COUNT(circle_id) FROM circle_user_pairs WHERE user_id=$1 AND circle_id=$2",
 		userID, circleID,
 	)
 	var count int
@@ -98,7 +98,7 @@ func (s *Store) InsertCircleUserPair(userID string, circleID string) error {
 	}
 
 	_, err = s.db.Exec(
-		"INSERT INTO user_circle_pairs (user_id, circle_id) VALUES ($1, $2)",
+		"INSERT INTO circle_user_pairs (user_id, circle_id) VALUES ($1, $2)",
 		userID, circleID,
 	)
 	if err != nil {
@@ -108,11 +108,11 @@ func (s *Store) InsertCircleUserPair(userID string, circleID string) error {
 	return nil
 }
 
-// DeleteUserCirclePair deletes (userID, circleID) pair
-func (s *Store) DeleteUserCirclePair(userID string, circleID string) error {
+// DeleteCircleUserPair deletes (userID, circleID) pair
+func (s *Store) DeleteCircleUserPair(userID string, circleID string) error {
 
 	_, err := s.db.Exec(
-		"DELETE FROM user_circle_pairs WHERE user_id=$1 AND circle_id=$2",
+		"DELETE FROM circle_user_pairs WHERE user_id=$1 AND circle_id=$2",
 		userID, circleID,
 	)
 	if err != nil {

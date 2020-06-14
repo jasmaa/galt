@@ -30,14 +30,14 @@ func (s *Store) GetStatusByID(statusID string) (*Status, error) {
 	return &status, nil
 }
 
-// GetUserFeed gets statuses in feed
-func (s *Store) GetUserFeed(userID string) (map[string]Status, error) {
+// GetStatusFeed gets statuses in feed
+func (s *Store) GetStatusFeed(userID string) (map[string]Status, error) {
 
 	rows, err := s.db.Query(
 		`SELECT id, user_id, content, posted_timestamp, is_edited
 		FROM statuses WHERE user_id IN (
 			SELECT circle_user_pairs.user_id
-			FROM circle_user_pairs JOIN circles ON circle_users_pairs.circle_id=circles.id
+			FROM circle_user_pairs JOIN circles ON circle_user_pairs.circle_id=circles.id
 			WHERE circles.user_id=$1
 		)`,
 		userID,

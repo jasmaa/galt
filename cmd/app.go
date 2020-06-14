@@ -59,6 +59,7 @@ func main() {
 	v1.DELETE("/user", handlers.DeleteProfile())
 
 	v1.GET("/status/:statusID", handlers.GetStatus())
+	v1.GET("/status", handlers.GetStatusFeed())
 	v1.POST("/status", handlers.PostStatus())
 	v1.PUT("/status/:statusID", handlers.UpdateStatus())
 	v1.DELETE("/status/:statusID", handlers.DeleteStatus())
@@ -79,8 +80,8 @@ func main() {
 	v1.POST("/circle", handlers.CreateCircle())
 	v1.PUT("/circle/:circleID", handlers.UpdateCircle())
 	v1.DELETE("/circle/:circleID", handlers.DeleteCircle())
-	//v1.POST("/circle/:circleID/addUser", handlers.LikeStatus())
-	//v1.POST("/circle/:circleID/removeUser", handlers.UnikeStatus())
+	v1.POST("/circle/:circleID/addUser", handlers.AddUserToCircle())
+	v1.POST("/circle/:circleID/removeUser", handlers.RemoveUserFromCircle())
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
