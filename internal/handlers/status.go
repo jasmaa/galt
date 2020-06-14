@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -9,37 +10,6 @@ import (
 
 	"github.com/jasmaa/galt/internal/store"
 )
-
-// apiStatus represents a status in API response
-type apiStatus struct {
-	ID              string    `form:"id" json:"id" binding:"required"`
-	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
-	Content         string    `form:"content" json:"content" binding:"required"`
-	IsLiked         bool      `form:"isLiked" json:"isLiked" binding:"required"`
-	Likes           int       `form:"likes" json:"likes" binding:"required"`
-	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
-	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
-	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
-}
-
-// buildStatusResponse builds API status response
-func buildStatusResponse(poster store.User, status store.Status, statusLikes int, isLiked bool, isReshared bool) apiStatus {
-	return apiStatus{
-		ID: status.ID,
-		Poster: apiUser{
-			ID:            poster.ID,
-			Username:      poster.Username,
-			Description:   poster.Description,
-			ProfileImgURL: poster.ProfileImgURL,
-		},
-		Content:         status.Content,
-		Likes:           statusLikes,
-		IsLiked:         isLiked,
-		Reshares:        -1, // filler value for now
-		PostedTimestamp: status.PostedTimestamp,
-		IsEdited:        status.IsEdited,
-	}
-}
 
 // GetStatus gets status by id
 func GetStatus() gin.HandlerFunc {
@@ -397,5 +367,86 @@ func DeleteStatus() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, 0, false, false))
+	}
+}
+
+// GetComments gets comments on a status
+func GetComments() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		statusID := c.Param("statusID")
+
+		comments, err := s.GetCommentsFromStatus(statusID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// TODO: do join instead??? or make client find user info instead??
+		apiComments := make(map[string]interface{})
+		for k, v := range comments {
+
+			user, err := s.GetUserByID(v.UserID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			commentLikes, err := s.GetCommentLikes(v.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			apiComments[k] = buildCommentResponse(*user, v, commentLikes)
+		}
+
+		c.JSON(http.StatusOK, apiComments)
+	}
+}
+
+// PostComment posts a comment on a status
+func PostComment() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		s := c.MustGet("store").(store.Store)
+		commentID := uuid.New().String()
+		authUserID := c.MustGet("authUserID").(string)
+		content := c.PostForm("content")
+		statusID := c.Param("statusID")
+
+		comment := store.Comment{
+			ID:              commentID,
+			UserID:          authUserID,
+			StatusID:        statusID,
+			ParentCommentID: sql.NullString{},
+			Content:         content,
+			PostedTimestamp: time.Now(),
+			IsEdited:        false,
+		}
+		err := s.InsertComment(comment)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		user, err := s.GetUserByID(authUserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, buildCommentResponse(*user, comment, 0))
 	}
 }

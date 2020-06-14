@@ -8,24 +8,6 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-// APIUser represents a user in API response
-type apiUser struct {
-	ID            string `form:"id" json:"id" binding:"required"`
-	Username      string `form:"username" json:"username" binding:"required"`
-	Description   string `form:"description" json:"description" binding:"required"`
-	ProfileImgURL string `form:"profileImgURL" json:"profileImgURL" binding:"required"`
-}
-
-// buildUserResponse builds API user response
-func buildUserResponse(user store.User) apiUser {
-	return apiUser{
-		ID:            user.ID,
-		Username:      user.Username,
-		Description:   user.Description,
-		ProfileImgURL: user.ProfileImgURL,
-	}
-}
-
 // GetUser gets user by id
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
