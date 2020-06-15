@@ -90,8 +90,8 @@ func GetStatusFeed() gin.HandlerFunc {
 			return
 		}
 
-		apiStatuses := make(map[string]interface{})
-		for k, v := range statuses {
+		apiStatuses := make([]interface{}, len(statuses))
+		for i, v := range statuses {
 
 			user, err := s.GetUserByID(v.UserID)
 			if err != nil {
@@ -117,7 +117,7 @@ func GetStatusFeed() gin.HandlerFunc {
 				return
 			}
 
-			apiStatuses[k] = buildStatusResponse(*user, v, statusLikes, isLiked, false)
+			apiStatuses[i] = buildStatusResponse(*user, v, statusLikes, isLiked, false)
 		}
 
 		c.JSON(http.StatusOK, apiStatuses)
@@ -450,8 +450,8 @@ func GetComments() gin.HandlerFunc {
 		}
 
 		// TODO: do join instead??? or make client find user info instead??
-		apiComments := make(map[string]interface{})
-		for k, v := range comments {
+		apiComments := make([]interface{}, len(comments))
+		for i, v := range comments {
 
 			user, err := s.GetUserByID(v.UserID)
 			if err != nil {
@@ -469,7 +469,7 @@ func GetComments() gin.HandlerFunc {
 				return
 			}
 
-			apiComments[k] = buildCommentResponse(*user, v, commentLikes)
+			apiComments[i] = buildCommentResponse(*user, v, commentLikes)
 		}
 
 		c.JSON(http.StatusOK, apiComments)

@@ -34,10 +34,12 @@ func (s *Store) GetCommentByID(commentID string) (*Comment, error) {
 }
 
 // GetCommentsFromStatus gets comments under a status
-func (s *Store) GetCommentsFromStatus(statusID string) (map[string]Comment, error) {
+func (s *Store) GetCommentsFromStatus(statusID string) ([]Comment, error) {
 
 	rows, err := s.db.Query(
-		"SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited FROM comments WHERE status_id=$1",
+		`SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited
+		FROM comments WHERE status_id=$1
+		ORDER BY posted_timestamp DESC`,
 		statusID,
 	)
 	defer rows.Close()
@@ -45,12 +47,12 @@ func (s *Store) GetCommentsFromStatus(statusID string) (map[string]Comment, erro
 		return nil, errors.New("Error retrieving comments")
 	}
 
-	comments := make(map[string]Comment)
+	comments := make([]Comment, 0)
 
 	for rows.Next() {
 		comment := Comment{}
 		rows.Scan(&comment.ID, &comment.UserID, &comment.StatusID, &comment.ParentCommentID, &comment.Content, &comment.PostedTimestamp, &comment.IsEdited)
-		comments[comment.ID] = comment
+		comments = append(comments, comment)
 	}
 
 	return comments, nil

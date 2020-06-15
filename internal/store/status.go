@@ -31,7 +31,7 @@ func (s *Store) GetStatusByID(statusID string) (*Status, error) {
 }
 
 // GetStatusFeed gets statuses in feed
-func (s *Store) GetStatusFeed(userID string) (map[string]Status, error) {
+func (s *Store) GetStatusFeed(userID string) ([]Status, error) {
 
 	rows, err := s.db.Query(
 		`SELECT id, user_id, content, posted_timestamp, is_edited
@@ -39,7 +39,7 @@ func (s *Store) GetStatusFeed(userID string) (map[string]Status, error) {
 			SELECT circle_user_pairs.user_id
 			FROM circle_user_pairs JOIN circles ON circle_user_pairs.circle_id=circles.id
 			WHERE circles.user_id=$1
-		)`,
+		) ORDER BY posted_timestamp DESC`,
 		userID,
 	)
 	defer rows.Close()
@@ -47,12 +47,12 @@ func (s *Store) GetStatusFeed(userID string) (map[string]Status, error) {
 		return nil, errors.New("Error retrieving feed")
 	}
 
-	statuses := make(map[string]Status)
+	statuses := make([]Status, 0)
 
 	for rows.Next() {
 		status := Status{}
 		rows.Scan(&status.ID, &status.UserID, &status.Content, &status.PostedTimestamp, &status.IsEdited)
-		statuses[status.ID] = status
+		statuses = append(statuses, status)
 	}
 
 	return statuses, nil
