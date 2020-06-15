@@ -31,7 +31,7 @@ func (s *Store) GetStatusByID(statusID string) (*Status, error) {
 }
 
 // GetStatusFeed gets statuses in feed
-func (s *Store) GetStatusFeed(userID string) ([]Status, error) {
+func (s *Store) GetStatusFeed(userID string, limit int, offset int) ([]Status, error) {
 
 	rows, err := s.db.Query(
 		`SELECT id, user_id, content, posted_timestamp, is_edited
@@ -39,8 +39,9 @@ func (s *Store) GetStatusFeed(userID string) ([]Status, error) {
 			SELECT circle_user_pairs.user_id
 			FROM circle_user_pairs JOIN circles ON circle_user_pairs.circle_id=circles.id
 			WHERE circles.user_id=$1
-		) ORDER BY posted_timestamp DESC`,
-		userID,
+		) ORDER BY posted_timestamp DESC
+		LIMIT $2 OFFSET $3`,
+		userID, limit, offset,
 	)
 	defer rows.Close()
 	if err != nil {

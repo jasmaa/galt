@@ -34,13 +34,14 @@ func (s *Store) GetCommentByID(commentID string) (*Comment, error) {
 }
 
 // GetCommentsFromStatus gets comments under a status
-func (s *Store) GetCommentsFromStatus(statusID string) ([]Comment, error) {
+func (s *Store) GetCommentsFromStatus(statusID string, limit int, offset int) ([]Comment, error) {
 
 	rows, err := s.db.Query(
 		`SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited
 		FROM comments WHERE status_id=$1
-		ORDER BY posted_timestamp DESC`,
-		statusID,
+		ORDER BY posted_timestamp DESC
+		LIMIT $2 OFFSET $3`,
+		statusID, limit, offset,
 	)
 	defer rows.Close()
 	if err != nil {

@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -67,6 +68,13 @@ func GetStatusFeed() gin.HandlerFunc {
 		s := c.MustGet("store").(store.Store)
 		authUserID := c.MustGet("authUserID").(string)
 
+		offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		if err != nil {
+			offset = 0
+		} else if offset < 0 {
+			offset = 0
+		}
+
 		if len(authUserID) == 0 {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "No token provided",
@@ -74,7 +82,7 @@ func GetStatusFeed() gin.HandlerFunc {
 			return
 		}
 
-		_, err := s.GetUserByID(authUserID)
+		_, err = s.GetUserByID(authUserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -82,7 +90,7 @@ func GetStatusFeed() gin.HandlerFunc {
 			return
 		}
 
-		statuses, err := s.GetStatusFeed(authUserID)
+		statuses, err := s.GetStatusFeed(authUserID, 30, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -120,7 +128,10 @@ func GetStatusFeed() gin.HandlerFunc {
 			apiStatuses[i] = buildStatusResponse(*user, v, statusLikes, isLiked, false)
 		}
 
-		c.JSON(http.StatusOK, apiStatuses)
+		c.JSON(http.StatusOK, gin.H{
+			"statuses": apiStatuses,
+			"offset":   offset + 30,
+		})
 	}
 }
 
@@ -441,7 +452,14 @@ func GetComments() gin.HandlerFunc {
 		s := c.MustGet("store").(store.Store)
 		statusID := c.Param("statusID")
 
-		comments, err := s.GetCommentsFromStatus(statusID)
+		offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+		if err != nil {
+			offset = 0
+		} else if offset < 0 {
+			offset = 0
+		}
+
+		comments, err := s.GetCommentsFromStatus(statusID, 30, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -472,7 +490,10 @@ func GetComments() gin.HandlerFunc {
 			apiComments[i] = buildCommentResponse(*user, v, commentLikes)
 		}
 
-		c.JSON(http.StatusOK, apiComments)
+		c.JSON(http.StatusOK, gin.H{
+			"comments": apiComments,
+			"offset":   offset + 30,
+		})
 	}
 }
 
