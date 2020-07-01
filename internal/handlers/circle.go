@@ -38,7 +38,7 @@ func GetCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, *circle))
 	}
 }
 
@@ -74,7 +74,7 @@ func CreateCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, circle))
 	}
 }
 
@@ -127,7 +127,7 @@ func UpdateCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, *circle))
 	}
 }
 
@@ -170,7 +170,7 @@ func DeleteCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, *circle))
 	}
 }
 
@@ -231,7 +231,7 @@ func AddUserToCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, *circle))
 	}
 }
 
@@ -292,6 +292,6 @@ func RemoveUserFromCircle() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildCircleResponse(*circle))
+		c.JSON(http.StatusOK, buildCircleResponse(s, *circle))
 	}
 }

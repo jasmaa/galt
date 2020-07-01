@@ -121,3 +121,17 @@ func (s *Store) DeleteCircleUserPair(userID string, circleID string) error {
 
 	return nil
 }
+
+// GetCircleUserCount gets the number of users in a circle
+func (s *Store) GetCircleUserCount(circleID string) (int, error) {
+
+	row := s.db.QueryRow("SELECT COUNT(circle_id) FROM circle_user_pairs WHERE circle_id=$1",
+		circleID,
+	)
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return -1, errors.New("Error with database")
+	}
+
+	return count, nil
+}

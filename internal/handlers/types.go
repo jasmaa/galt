@@ -144,12 +144,17 @@ type apiCircle struct {
 	ID          string `form:"id" json:"id" binding:"required"`
 	Name        string `form:"name" json:"name" binding:"required"`
 	Description string `form:"description" json:"description" binding:"required"`
+	UserCount   int    `form:"userCount" json:"userCount" binding:"required"`
 }
 
-func buildCircleResponse(circle store.Circle) apiCircle {
+func buildCircleResponse(s store.Store, circle store.Circle) apiCircle {
+
+	userCount, _ := s.GetCircleUserCount(circle.ID)
+
 	return apiCircle{
 		ID:          circle.ID,
 		Name:        circle.Name,
 		Description: circle.Description,
+		UserCount:   userCount,
 	}
 }
