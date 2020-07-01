@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/jasmaa/galt/internal/store"
 )
 
@@ -31,25 +30,15 @@ func GetUser() gin.HandlerFunc {
 func GetProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, buildUserResponse(*user))
+		c.JSON(http.StatusOK, buildUserResponse(*authUser))
 	}
 }
 
@@ -58,11 +47,10 @@ func UpdateProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
@@ -71,26 +59,18 @@ func UpdateProfile() gin.HandlerFunc {
 		description := c.PostForm("description")
 		profileImgURL := c.PostForm("profileImgURL")
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
 		// Update user
 		if len(username) > 0 {
-			user.Username = username
+			authUser.Username = username
 		}
 		if len(description) > 0 {
-			user.Description = description
+			authUser.Description = description
 		}
 		if len(profileImgURL) > 0 {
-			user.ProfileImgURL = profileImgURL
+			authUser.ProfileImgURL = profileImgURL
 		}
 
-		err = s.UpdateUser(*user)
+		err := s.UpdateUser(*authUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -98,7 +78,7 @@ func UpdateProfile() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildUserResponse(*user))
+		c.JSON(http.StatusOK, buildUserResponse(*authUser))
 	}
 }
 
@@ -107,16 +87,15 @@ func DeleteProfile() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
-		err := s.DeleteUserByID(authUserID)
+		err := s.DeleteUserByID(authUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

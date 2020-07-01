@@ -7,6 +7,8 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+
+	"github.com/jasmaa/galt/internal/store"
 )
 
 // AuthUser authorizes user
@@ -17,7 +19,7 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if len(authHeader) == 0 {
-			c.Set("authUserID", "")
+			c.Set("authUser", nil)
 			c.Next()
 			return
 		}
@@ -53,7 +55,20 @@ func AuthUser(hmacSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("authUserID", claims["userID"])
+
+			// Get authenticated user
+			s := c.MustGet("store").(store.Store)
+			authUserID := claims["userID"].(string)
+			authUser, err := s.GetUserByID(authUserID)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error": "Invalid token",
+				})
+				c.Abort()
+				return
+			}
+
+			c.Set("authUser", authUser)
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{

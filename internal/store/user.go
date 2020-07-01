@@ -79,6 +79,7 @@ func (s *Store) UpdateUser(user User) error {
 }
 
 // DeleteUserByID deletes user by userID
+// TODO: change delete to set default
 func (s *Store) DeleteUserByID(userID string) error {
 
 	_, err := s.db.Exec("DELETE FROM users WHERE id=$1", userID)

@@ -18,7 +18,8 @@ func GetStatus() gin.HandlerFunc {
 
 		s := c.MustGet("store").(store.Store)
 		statusID := c.Param("statusID")
-		authUserID := c.MustGet("authUserID").(string)
+
+		authUser, _ := c.MustGet("authUser").(*store.User)
 
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
@@ -28,7 +29,7 @@ func GetStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(status.UserID)
+		poster, err := s.GetUserByID(status.UserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -36,28 +37,7 @@ func GetStatus() gin.HandlerFunc {
 			return
 		}
 
-		statusLikes, err := s.GetStatusLikes(statusID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		if len(authUserID) == 0 {
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
-		} else {
-
-			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
-		}
+		c.JSON(http.StatusOK, buildStatusResponse(s, *poster, *status, authUser))
 	}
 }
 
@@ -66,7 +46,13 @@ func GetStatusFeed() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Not authorized",
+			})
+			return
+		}
 
 		offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
 		if err != nil {
@@ -75,22 +61,7 @@ func GetStatusFeed() gin.HandlerFunc {
 			offset = 0
 		}
 
-		if len(authUserID) == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
-			})
-			return
-		}
-
-		_, err = s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		statuses, err := s.GetStatusFeed(authUserID, 30, offset)
+		statuses, err := s.GetStatusFeed(authUser.ID, 30, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -99,9 +70,9 @@ func GetStatusFeed() gin.HandlerFunc {
 		}
 
 		apiStatuses := make([]interface{}, len(statuses))
-		for i, v := range statuses {
+		for i, status := range statuses {
 
-			user, err := s.GetUserByID(v.UserID)
+			poster, err := s.GetUserByID(status.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -109,23 +80,7 @@ func GetStatusFeed() gin.HandlerFunc {
 				return
 			}
 
-			statusLikes, err := s.GetStatusLikes(v.ID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			isLiked, err := s.GetIsUserLikedStatus(authUserID, v.ID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			apiStatuses[i] = buildStatusResponse(*user, v, statusLikes, isLiked, false)
+			apiStatuses[i] = buildStatusResponse(s, *poster, status, authUser)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -140,24 +95,23 @@ func PostStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-
-		statusID := uuid.New().String()
-		authUserID := c.MustGet("authUserID").(string)
-		content := c.PostForm("content")
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
+
+		statusID := uuid.New().String()
+		content := c.PostForm("content")
 
 		// TODO: Add content filtering here??
 
 		// Insert status
 		status := store.Status{
 			ID:              statusID,
-			UserID:          authUserID,
+			UserID:          authUser.ID,
 			Content:         content,
 			PostedTimestamp: time.Now(),
 			IsEdited:        false,
@@ -170,15 +124,7 @@ func PostStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, buildStatusResponse(*user, status, 0, false, false))
+		c.JSON(http.StatusOK, buildStatusResponse(s, *authUser, status, authUser))
 	}
 }
 
@@ -187,16 +133,15 @@ func UpdateStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-		statusID := c.Param("statusID")
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
+		statusID := c.Param("statusID")
 		content := c.PostForm("content")
 
 		status, err := s.GetStatusByID(statusID)
@@ -207,16 +152,8 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
 		// Check if user is poster
-		if status.UserID != user.ID {
+		if status.UserID != authUser.ID {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "You do not have permission to edit this status",
 			})
@@ -238,28 +175,7 @@ func UpdateStatus() gin.HandlerFunc {
 			return
 		}
 
-		statusLikes, err := s.GetStatusLikes(statusID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		if len(authUserID) == 0 {
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
-		} else {
-
-			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
-		}
+		c.JSON(http.StatusOK, buildStatusResponse(s, *authUser, *status, authUser))
 	}
 }
 
@@ -268,16 +184,15 @@ func LikeStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-		statusID := c.Param("statusID")
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
+		statusID := c.Param("statusID")
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -286,7 +201,7 @@ func LikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
+		poster, err := s.GetUserByID(status.UserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -295,7 +210,7 @@ func LikeStatus() gin.HandlerFunc {
 		}
 
 		// Update status likes
-		err = s.InsertStatusLikePair(authUserID, statusID)
+		err = s.InsertStatusLikePair(authUser.ID, statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -303,28 +218,7 @@ func LikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		statusLikes, err := s.GetStatusLikes(statusID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		if len(authUserID) == 0 {
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
-		} else {
-
-			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
-		}
+		c.JSON(http.StatusOK, buildStatusResponse(s, *poster, *status, authUser))
 	}
 }
 
@@ -333,16 +227,15 @@ func UnikeStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-		statusID := c.Param("statusID")
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
+		statusID := c.Param("statusID")
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -351,7 +244,7 @@ func UnikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
+		poster, err := s.GetUserByID(status.UserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -360,7 +253,7 @@ func UnikeStatus() gin.HandlerFunc {
 		}
 
 		// Update status likes
-		err = s.DeleteStatusLikePair(authUserID, statusID)
+		err = s.DeleteStatusLikePair(authUser.ID, statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -368,28 +261,7 @@ func UnikeStatus() gin.HandlerFunc {
 			return
 		}
 
-		statusLikes, err := s.GetStatusLikes(statusID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		if len(authUserID) == 0 {
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, false, false))
-		} else {
-
-			isLiked, err := s.GetIsUserLikedStatus(authUserID, statusID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, buildStatusResponse(*user, *status, statusLikes, isLiked, false))
-		}
+		c.JSON(http.StatusOK, buildStatusResponse(s, *poster, *status, authUser))
 	}
 }
 
@@ -398,16 +270,15 @@ func DeleteStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
-		authUserID := c.MustGet("authUserID").(string)
-		statusID := c.Param("statusID")
-
-		if len(authUserID) == 0 {
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No token provided",
+				"error": "Not authorized",
 			})
 			return
 		}
 
+		statusID := c.Param("statusID")
 		status, err := s.GetStatusByID(statusID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -416,16 +287,8 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
 		// Check if user is poster
-		if status.UserID != user.ID {
+		if status.UserID != authUser.ID {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "You do not have permission to delete this status",
 			})
@@ -441,7 +304,7 @@ func DeleteStatus() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, buildStatusResponse(*user, *status, 0, false, false))
+		c.JSON(http.StatusOK, buildStatusResponse(s, *authUser, *status, authUser))
 	}
 }
 
@@ -450,6 +313,8 @@ func GetComments() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
+		authUser, _ := c.MustGet("authUser").(*store.User)
+
 		statusID := c.Param("statusID")
 
 		offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -469,9 +334,9 @@ func GetComments() gin.HandlerFunc {
 
 		// TODO: do join instead??? or make client find user info instead??
 		apiComments := make([]interface{}, len(comments))
-		for i, v := range comments {
+		for i, comment := range comments {
 
-			user, err := s.GetUserByID(v.UserID)
+			poster, err := s.GetUserByID(comment.UserID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -479,15 +344,7 @@ func GetComments() gin.HandlerFunc {
 				return
 			}
 
-			commentLikes, err := s.GetCommentLikes(v.ID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-				return
-			}
-
-			apiComments[i] = buildCommentResponse(*user, v, commentLikes)
+			apiComments[i] = buildCommentResponse(s, *poster, comment, authUser)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -502,14 +359,21 @@ func PostComment() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		s := c.MustGet("store").(store.Store)
+		authUser, ok := c.MustGet("authUser").(*store.User)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Not authorized",
+			})
+			return
+		}
+
 		commentID := uuid.New().String()
-		authUserID := c.MustGet("authUserID").(string)
 		content := c.PostForm("content")
 		statusID := c.Param("statusID")
 
 		comment := store.Comment{
 			ID:              commentID,
-			UserID:          authUserID,
+			UserID:          authUser.ID,
 			StatusID:        statusID,
 			ParentCommentID: sql.NullString{},
 			Content:         content,
@@ -524,14 +388,6 @@ func PostComment() gin.HandlerFunc {
 			return
 		}
 
-		user, err := s.GetUserByID(authUserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, buildCommentResponse(*user, comment, 0))
+		c.JSON(http.StatusOK, buildCommentResponse(s, *authUser, comment, authUser))
 	}
 }

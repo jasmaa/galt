@@ -6,7 +6,6 @@ import (
 	"github.com/jasmaa/galt/internal/store"
 )
 
-// APIUser represents a user in API response
 type apiUser struct {
 	ID            string `form:"id" json:"id" binding:"required"`
 	Username      string `form:"username" json:"username" binding:"required"`
@@ -14,7 +13,6 @@ type apiUser struct {
 	ProfileImgURL string `form:"profileImgURL" json:"profileImgURL" binding:"required"`
 }
 
-// buildUserResponse builds API user response
 func buildUserResponse(user store.User) apiUser {
 	return apiUser{
 		ID:            user.ID,
@@ -24,21 +22,54 @@ func buildUserResponse(user store.User) apiUser {
 	}
 }
 
-// apiStatus represents a status in API response
-type apiStatus struct {
+type apiStatusNonAuth struct {
 	ID              string    `form:"id" json:"id" binding:"required"`
 	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
 	Content         string    `form:"content" json:"content" binding:"required"`
-	IsLiked         bool      `form:"isLiked" json:"isLiked" binding:"required"`
 	Likes           int       `form:"likes" json:"likes" binding:"required"`
 	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
 	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
 	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
 }
 
-// buildStatusResponse builds API status response
-func buildStatusResponse(poster store.User, status store.Status, statusLikes int, isLiked bool, isReshared bool) apiStatus {
-	return apiStatus{
+type apiStatusAuth struct {
+	ID              string    `form:"id" json:"id" binding:"required"`
+	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
+	Content         string    `form:"content" json:"content" binding:"required"`
+	Likes           int       `form:"likes" json:"likes" binding:"required"`
+	IsLiked         bool      `form:"isLiked" json:"isLiked" binding:"required"`
+	Reshares        int       `form:"reshares" json:"reshares" binding:"required"`
+	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
+	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
+}
+
+func buildStatusResponse(s store.Store, poster store.User, status store.Status, authUser *store.User) interface{} {
+
+	statusLikes, _ := s.GetStatusLikes(status.ID)
+
+	// Return authenticated response
+	if authUser != nil {
+
+		isLiked, _ := s.GetIsUserLikedStatus(authUser.ID, status.ID)
+
+		return apiStatusAuth{
+			ID: status.ID,
+			Poster: apiUser{
+				ID:            poster.ID,
+				Username:      poster.Username,
+				Description:   poster.Description,
+				ProfileImgURL: poster.ProfileImgURL,
+			},
+			Content:         status.Content,
+			Likes:           statusLikes,
+			IsLiked:         isLiked,
+			Reshares:        -2, // filler value for now
+			PostedTimestamp: status.PostedTimestamp,
+			IsEdited:        status.IsEdited,
+		}
+	}
+
+	return apiStatusNonAuth{
 		ID: status.ID,
 		Poster: apiUser{
 			ID:            poster.ID,
@@ -48,15 +79,13 @@ func buildStatusResponse(poster store.User, status store.Status, statusLikes int
 		},
 		Content:         status.Content,
 		Likes:           statusLikes,
-		IsLiked:         isLiked,
 		Reshares:        -1, // filler value for now
 		PostedTimestamp: status.PostedTimestamp,
 		IsEdited:        status.IsEdited,
 	}
 }
 
-// apiComment represents a status in API response
-type apiComment struct {
+type apiCommentNonAuth struct {
 	ID              string    `form:"id" json:"id" binding:"required"`
 	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
 	Content         string    `form:"content" json:"content" binding:"required"`
@@ -65,10 +94,38 @@ type apiComment struct {
 	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
 }
 
-// TODO: figure out response for auth vs not auth
-// buildCommentResponse builds API comment response
-func buildCommentResponse(poster store.User, comment store.Comment, commentLikes int) apiComment {
-	return apiComment{
+type apiCommentAuth struct {
+	ID              string    `form:"id" json:"id" binding:"required"`
+	Poster          apiUser   `form:"poster" json:"poster" binding:"required"`
+	Content         string    `form:"content" json:"content" binding:"required"`
+	Likes           int       `form:"likes" json:"likes" binding:"required"`
+	IsLiked         bool      `form:"isLiked" json:"isLiked" binding:"required"`
+	PostedTimestamp time.Time `form:"postedTimestamp" json:"postedTimestamp" binding:"required"`
+	IsEdited        bool      `form:"isEdited" json:"isEdited" binding:"required"`
+}
+
+func buildCommentResponse(s store.Store, poster store.User, comment store.Comment, authUser *store.User) interface{} {
+
+	commentLikes, _ := s.GetCommentLikes(comment.ID)
+
+	if authUser != nil {
+		return apiCommentAuth{
+			ID: comment.ID,
+			Poster: apiUser{
+				ID:            poster.ID,
+				Username:      poster.Username,
+				Description:   poster.Description,
+				ProfileImgURL: poster.ProfileImgURL,
+			},
+			Content:         comment.Content,
+			Likes:           commentLikes,
+			IsLiked:         false, // filler value
+			PostedTimestamp: comment.PostedTimestamp,
+			IsEdited:        comment.IsEdited,
+		}
+	}
+
+	return apiCommentNonAuth{
 		ID: comment.ID,
 		Poster: apiUser{
 			ID:            poster.ID,
@@ -83,14 +140,12 @@ func buildCommentResponse(poster store.User, comment store.Comment, commentLikes
 	}
 }
 
-// apiCircle represents a status in API response
 type apiCircle struct {
 	ID          string `form:"id" json:"id" binding:"required"`
 	Name        string `form:"name" json:"name" binding:"required"`
 	Description string `form:"description" json:"description" binding:"required"`
 }
 
-// buildStatusResponse builds API status response
 func buildCircleResponse(circle store.Circle) apiCircle {
 	return apiCircle{
 		ID:          circle.ID,

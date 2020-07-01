@@ -154,6 +154,10 @@ func TestDeleteProfileSuccess(t *testing.T) {
 	defer s.Close()
 	r := setupRouter(s)
 
+	mock.ExpectQuery("SELECT (.+) FROM users WHERE id=?").
+		WithArgs("12345").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "description", "profile_img_url"}).
+			AddRow("12345", "testuser", "$2b$10$KpZAZIPai8SyT7k8zT582ec5Va9.KrnoMc9D5UnGkDRdVvTp263/q", "", ""))
 	mock.ExpectExec("DELETE FROM users WHERE id=?").
 		WithArgs("12345").
 		WillReturnResult(sqlmock.NewResult(1, 1))
