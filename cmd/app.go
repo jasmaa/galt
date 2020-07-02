@@ -68,8 +68,9 @@ func main() {
 	v1.GET("/status/:statusID/comments", handlers.GetComments())
 	v1.POST("/status/:statusID/comment", handlers.PostComment())
 
+	v1.GET("/comment/:commentID", handlers.GetCommentChain())
+	v1.POST("/comment/:commentID", middleware.AuthUser(hmacSecret), handlers.PostReply())
 	/*
-		v1.GET("/comment/:commentID", handlers.GetStatus())
 		v1.PUT("/comment/:commentID", middleware.AuthUser(hmacSecret), handlers.UpdateStatus())
 		v1.DELETE("/comment/:commentID", middleware.AuthUser(hmacSecret), handlers.DeleteStatus())
 		v1.POST("/comment/:commentID/like", middleware.AuthUser(hmacSecret), handlers.LikeStatus())

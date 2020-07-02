@@ -98,6 +98,30 @@ func (s *Store) DeleteCommentByID(commentID string) error {
 	return nil
 }
 
+// GetCommentReplies gets replies for a comment
+func (s *Store) GetCommentReplies(commentID string) ([]Comment, error) {
+	rows, err := s.db.Query(
+		`SELECT id, user_id, status_id, parent_comment_id, content, posted_timestamp, is_edited
+		FROM comments WHERE parent_comment_id=$1
+		ORDER BY posted_timestamp DESC`,
+		commentID,
+	)
+	defer rows.Close()
+	if err != nil {
+		return nil, errors.New("Error retrieving comments")
+	}
+
+	comments := make([]Comment, 0)
+
+	for rows.Next() {
+		comment := Comment{}
+		rows.Scan(&comment.ID, &comment.UserID, &comment.StatusID, &comment.ParentCommentID, &comment.Content, &comment.PostedTimestamp, &comment.IsEdited)
+		comments = append(comments, comment)
+	}
+
+	return comments, nil
+}
+
 // GetCommentLikes gets number of likes on a comment
 func (s *Store) GetCommentLikes(commentID string) (int, error) {
 

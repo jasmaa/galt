@@ -209,7 +209,7 @@ func AddUserToCircle() gin.HandlerFunc {
 		// Check if user owns circle
 		if authUser.ID != circle.UserID {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "You do not have permission to edit this status",
+				"error": "You do not have permission to edit this circle",
 			})
 			return
 		}
@@ -270,7 +270,7 @@ func RemoveUserFromCircle() gin.HandlerFunc {
 		// Check if user owns circle
 		if authUser.ID != circle.UserID {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "You do not have permission to edit this status",
+				"error": "You do not have permission to edit this circle",
 			})
 			return
 		}

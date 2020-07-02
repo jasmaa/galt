@@ -140,6 +140,38 @@ func buildCommentResponse(s store.Store, poster store.User, comment store.Commen
 	}
 }
 
+type apiCommentChain struct {
+	Comment interface{}       `form:"comment" json:"comment" binding:"required"`
+	Replies []apiCommentChain `form:"replies" json:"replies" binding:"required"`
+}
+
+// TODO: add limit and offset for given levels
+func buildCommentChainResponse(s store.Store, commentID string, authUser *store.User, level int) apiCommentChain {
+
+	comment, _ := s.GetCommentByID(commentID)
+	poster, _ := s.GetUserByID(comment.UserID)
+
+	commentResponse := buildCommentResponse(s, *poster, *comment, authUser)
+
+	if level <= 0 {
+		return apiCommentChain{
+			Comment: commentResponse,
+			Replies: nil,
+		}
+	}
+
+	comments, _ := s.GetCommentReplies(commentID)
+	commentChains := make([]apiCommentChain, len(comments))
+	for i, comment := range comments {
+		commentChains[i] = buildCommentChainResponse(s, comment.ID, authUser, level-1)
+	}
+
+	return apiCommentChain{
+		Comment: commentResponse,
+		Replies: commentChains,
+	}
+}
+
 type apiCircle struct {
 	ID          string `form:"id" json:"id" binding:"required"`
 	Name        string `form:"name" json:"name" binding:"required"`
